@@ -1,3 +1,4 @@
+# migrations/env.py
 import logging
 from logging.config import fileConfig
 
@@ -13,7 +14,8 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
-
+# 導入所有 Model，保證 db.metadata 裡有他們
+from app.models import User, Product, Order, OrderItem, Payment
 
 def get_engine():
     try:
