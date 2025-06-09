@@ -1,5 +1,8 @@
 #!/bin/sh
-# 先把所有 migration 套到資料庫
-flask db upgrade  
-# 再啟動 Flask
-exec flask run --host=0.0.0.0
+set -e
+
+# 1. 自動套用所有還沒跑過的 migration
+flask db upgrade
+
+# 2. 啟動 Flask（生產建議 gunicorn）
+exec gunicorn -b 0.0.0.0:5000 run:app
