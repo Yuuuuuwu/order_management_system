@@ -287,8 +287,8 @@ git push
 
 ######################migration 要在docker建出來的資料庫中進行############
 
-
-docker exec -it oms_app bash
+docker exec -it oms_app bash 
+docker exec -it oms_db bash 
 
 
 echo $DATABASE_URL

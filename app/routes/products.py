@@ -1,199 +1,96 @@
-#惠中0513新增
-
 # app/routes/products.py
+
 from flask import Blueprint, request, jsonify, abort
-from flask_jwt_extended import jwt_required, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt  # # 修改：匯入 get_jwt_identity, get_jwt
 from app import db
 from app.models import Product
 
 bp_prod = Blueprint('products', __name__, url_prefix='/products')
 
-# —— 1. 列出所有商品 ——
 @bp_prod.route('', methods=['GET'])
+@jwt_required()  # # 修改：新增 JWT 驗證
 def list_products():
-
     """
     列出所有商品
-    ---
-    tags:
-      - Products
-    responses:
-      200:
-        description: 取得商品清單
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Product'
+    admin: 看所有；user: 只看自己
     """
-        
-    prods = Product.query.order_by(Product.id).all()   # 取得所有商品
-    return jsonify([p.to_dict() for p in prods]), 200
+    claims = get_jwt()                    # # 修改：取得 JWT claims
+    uid = int(get_jwt_identity())         # # 修改：取得 user_id
+    if claims.get("role") == "admin":     # # 修改：admin 可看所有
+        qs = Product.query.order_by(Product.id)
+    else:
+        qs = Product.query.filter_by(user_id=uid).order_by(Product.id)  # # 修改：user 只看自己
+    return jsonify([p.to_dict() for p in qs]), 200
 
-# —— 2. 取得單一商品 ——
 @bp_prod.route('/<int:pid>', methods=['GET'])
+@jwt_required()  # # 修改：新增 JWT 驗證
 def get_product(pid):
-
     """
     取得單一商品
-    ---
-    tags:
-      - Products
-    parameters:
-      - in: path
-        name: pid
-        schema:
-          type: integer
-        required: true
-        description: 商品 ID
-    responses:
-      200:
-        description: 商品資料
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Product'
-      404:
-        description: 找不到商品
+    admin: 任意；user: 只能自己的
     """
-
-    p = Product.query.get_or_404(pid)                  # 找不到回 404
+    claims = get_jwt()                    
+    uid = int(get_jwt_identity())         
+    p = Product.query.get_or_404(pid)
+    if claims.get("role") != "admin" and p.user_id != uid:  # # 修改：非 admin 拒絕存取他人
+        abort(403, description="沒有權限存取此商品")
     return jsonify(p.to_dict()), 200
 
-# —— 3. 新增商品（僅 Admin） ——
 @bp_prod.route('', methods=['POST'])
-@jwt_required()
+@jwt_required()  # # 修改：新增 JWT 驗證，移除原本僅 Admin 限制
 def create_product():
     """
-    新增商品（僅 Admin）
-    ---
-    tags:
-      - Products
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProductInput'
-    responses:
-      201:
-        description: 商品建立成功
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Product'
-      400:
-        description: 欄位錯誤
-      403:
-        description: 權限不足
-    """    
-    claims = get_jwt()
-    if claims.get("role") != "admin":
-        abort(403, description="需要管理員權限")
-
+    新增商品
+    admin/user 均可建立，屬於自己的商品
+    """
     data = request.get_json() or {}
-    # 驗證必填欄位
     for field in ('name', 'price'):
         if field not in data:
             abort(400, description=f"缺少欄位：{field}")
-
+    uid = int(get_jwt_identity())        # # 修改：取得 user_id
     prod = Product(
         name=data['name'],
         price=data['price'],
         stock=data.get('stock', 0),
-        desc=data.get('desc')
+        desc=data.get('desc'),
+        user_id=uid                       # # 修改：設定建立者
     )
     db.session.add(prod)
     db.session.commit()
     return jsonify(prod.to_dict()), 201
 
-# —— 4. 更新商品（僅 Admin） ——
 @bp_prod.route('/<int:pid>', methods=['PUT'])
-@jwt_required()
+@jwt_required()  # # 修改：新增 JWT 驗證
 def update_product(pid):
     """
-    更新商品（僅 Admin）(Update a product, Admin only)
-    ---
-    tags:
-      - Products
-    security:
-      - bearerAuth: []
-    consumes:
-      - application/json
-    parameters:
-      - in: path
-        name: pid
-        required: true
-        schema:
-          type: integer
-        description: 商品 ID
-      - in: body
-        name: product
-        required: true
-        schema:
-          $ref: '#/components/schemas/ProductInput'
-    responses:
-      200:
-        description: 商品更新成功
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Product'
-      400:
-        description: 欄位錯誤或格式不符
-      403:
-        description: 權限不足（需要 Admin）
-      404:
-        description: 找不到指定商品
-    """    
+    更新商品
+    admin: 任意；user: 只能更新自己的
+    """
     claims = get_jwt()
-    if claims.get("role") != "admin":
-        abort(403, description="需要管理員權限")
-
-    prod = Product.query.get_or_404(pid)
+    uid = int(get_jwt_identity())
+    p = Product.query.get_or_404(pid)
+    if claims.get("role") != "admin" and p.user_id != uid:  # # 修改：非 admin 拒絕修改他人
+        abort(403, description="沒有權限修改此商品")
     data = request.get_json() or {}
-    # 只更新有提供的欄位
-    prod.name  = data.get('name', prod.name)
-    prod.price = data.get('price', prod.price)
-    prod.stock = data.get('stock', prod.stock)
-    prod.desc  = data.get('desc',  prod.desc)
+    p.name  = data.get('name',  p.name)
+    p.price = data.get('price', p.price)
+    p.stock = data.get('stock', p.stock)
+    p.desc  = data.get('desc',  p.desc)
     db.session.commit()
-    return jsonify(prod.to_dict()), 200
+    return jsonify(p.to_dict()), 200
 
-# —— 5. 刪除商品（僅 Admin） ——
 @bp_prod.route('/<int:pid>', methods=['DELETE'])
-@jwt_required()
+@jwt_required()  # # 修改：新增 JWT 驗證
 def delete_product(pid):
     """
-    刪除商品（僅 Admin）(Delete a product, Admin only)
-    ---
-    tags:
-      - Products
-    security:
-      - bearerAuth: []
-    parameters:
-      - in: path
-        name: pid
-        required: true
-        schema:
-          type: integer
-        description: 商品 ID
-    responses:
-      204:
-        description: 商品刪除成功 (No Content)
-      403:
-        description: 權限不足（需要 Admin）
-      404:
-        description: 找不到指定商品
-    """    
+    刪除商品
+    admin: 任意；user: 只能刪除自己的
+    """
     claims = get_jwt()
-    if claims.get("role") != "admin":
-        abort(403, description="需要管理員權限")
-
-    prod = Product.query.get_or_404(pid)
-    db.session.delete(prod)
+    uid = int(get_jwt_identity())
+    p = Product.query.get_or_404(pid)
+    if claims.get("role") != "admin" and p.user_id != uid:  # # 修改：非 admin 拒絕刪除他人
+        abort(403, description="沒有權限刪除此商品")
+    db.session.delete(p)
     db.session.commit()
     return '', 204

@@ -41,19 +41,29 @@ def create_user():
                         "name": "Bad Request",
                         "errors": err.messages}), 400
 
-    # 直接新增（不再做 username/email 重複檢查，以符合測試預期）
-    user = User(username=valid['username'], email=valid['email'])
+    # 讀取角色，預設為 user
+    role = payload.get('role', 'user')
+    # 建立新使用者
+    user = User(
+        username=valid['username'],
+        email=valid['email'],
+        role=role
+    )
+    # 若有提供密碼，則設定
+    if 'password' in payload:
+        user.set_password(payload['password'])
+
     db.session.add(user)
     db.session.commit()
 
     return jsonify({"id": user.id,
                     "username": user.username,
-                    "email": user.email}), 201
+                    "email": user.email,
+                    "role": user.role}), 201
 
 # ─────────────  Read all  ─────────────
 @bp_users.route('', methods=['GET'])
 def get_users():
-
 
     """
     取得所有使用者 (List users)
@@ -71,11 +81,9 @@ def get_users():
                 $ref: '#/components/schemas/User'
     """
 
-
-
     users = User.query.all()
     return jsonify([
-        {"id": u.id, "username": u.username, "email": u.email}
+        {"id": u.id, "username": u.username, "email": u.email, "role": u.role}
         for u in users
     ]), 200
 
@@ -104,12 +112,13 @@ def get_user(user_id):
               $ref: '#/components/schemas/User'
       404:
         description: 使用者不存在
-    """    
+    """
 
-
-    
     u = User.query.get_or_404(user_id, description="找不到使用者 (User not found)")
-    return jsonify({"id": u.id, "username": u.username, "email": u.email}), 200
+    return jsonify({"id": u.id,
+                    "username": u.username,
+                    "email": u.email,
+                    "role": u.role}), 200
 
 # ─────────────  Update  ─────────────
 @bp_users.route('/<int:user_id>', methods=['PUT'])
@@ -145,8 +154,6 @@ def update_user(user_id):
         description: 使用者不存在
     """
 
-
-
     payload = request.get_json() or {}
     try:
         valid = user_schema.load(payload, partial=True)  # 僅驗有給的欄位
@@ -160,13 +167,19 @@ def update_user(user_id):
         u.username = valid['username']
     if 'email' in valid:
         u.email = valid['email']
+    if 'role' in payload:
+        u.role = payload['role']
+    if 'password' in payload:
+        user.set_password(payload['password'])
     db.session.commit()
-    return jsonify({"id": u.id, "username": u.username, "email": u.email}), 200
+    return jsonify({"id": u.id,
+                    "username": u.username,
+                    "email": u.email,
+                    "role": u.role}), 200
 
 # ─────────────  Delete  ─────────────
 @bp_users.route('/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-
     """
     刪除使用者 (Delete a user)
     ---
@@ -185,12 +198,14 @@ def delete_user(user_id):
       404:
         description: 使用者不存在
     """
-
-
-
     u = User.query.get_or_404(user_id, description="找不到使用者 (User not found)")
-    db.session.delete(u)
-    db.session.commit()
-    return jsonify({"message": "使用者刪除成功 (User deleted successfully)"}), 200
-
-
+    try:
+        db.session.delete(u)
+        db.session.commit()
+        return jsonify({"message": "使用者刪除成功 (User deleted successfully)"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print("刪除錯誤：", e)  # 一定要有這行
+        import traceback
+        traceback.print_exc()   # 這樣才會印完整 traceback
+        return jsonify({"error": str(e)}), 500
