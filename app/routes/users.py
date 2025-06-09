@@ -180,7 +180,6 @@ def update_user(user_id):
 # ─────────────  Delete  ─────────────
 @bp_users.route('/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-
     """
     刪除使用者 (Delete a user)
     ---
@@ -199,8 +198,14 @@ def delete_user(user_id):
       404:
         description: 使用者不存在
     """
-
     u = User.query.get_or_404(user_id, description="找不到使用者 (User not found)")
-    db.session.delete(u)
-    db.session.commit()
-    return jsonify({"message": "使用者刪除成功 (User deleted successfully)"}), 200
+    try:
+        db.session.delete(u)
+        db.session.commit()
+        return jsonify({"message": "使用者刪除成功 (User deleted successfully)"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print("刪除錯誤：", e)  # 一定要有這行
+        import traceback
+        traceback.print_exc()   # 這樣才會印完整 traceback
+        return jsonify({"error": str(e)}), 500

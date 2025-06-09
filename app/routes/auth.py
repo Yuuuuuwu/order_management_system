@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import (
-    create_access_token, jwt_required, get_jwt_identity
+    create_access_token, jwt_required, get_jwt_identity, decode_token
 )
 from app import db
 from app.models import User
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
 
 bp_auth = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -91,7 +92,8 @@ def login():
     使用者登入 (Login)
     """
     data = request.get_json() or {}
-    user = User.query.filter_by(username=data.get('username')).first()
+    # 改為用 email 查詢
+    user = User.query.filter_by(email=data.get('email')).first()
     if not user or not check_password_hash(user.password_hash, data.get('password', '')):
         abort(401, description="帳號或密碼錯誤")
 
@@ -116,3 +118,50 @@ def me():
         "email": user.email,
         "role": user.role              # # 修改：回傳 role
     }), 200
+
+# ---------- 忘記密碼 ----------
+@bp_auth.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """
+    忘記密碼：產生重設密碼 token（實務應寄信，這裡直接回傳 token）
+    """
+    data = request.get_json() or {}
+    email = data.get('email')
+    if not email:
+        abort(400, description="請輸入 email")
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        abort(404, description="查無此 email")
+    # 產生短效 JWT token，作為重設密碼用
+    reset_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(minutes=15),
+        additional_claims={"reset_password": True}
+    )
+    # 實務應寄信，這裡直接回傳
+    return jsonify({"reset_token": reset_token}), 200
+
+# ---------- 重設密碼 ----------
+@bp_auth.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    重設密碼：帶 token 與新密碼
+    """
+    data = request.get_json() or {}
+    token = data.get('token')
+    new_password = data.get('new_password')
+    if not token or not new_password:
+        abort(400, description="缺少 token 或新密碼")
+    try:
+        decoded = decode_token(token)
+        if not decoded.get('reset_password'):
+            abort(400, description="無效的重設密碼 token")
+        user_id = int(decoded['sub'])
+    except Exception:
+        abort(400, description="token 無效或過期")
+    user = User.query.get(user_id)
+    if not user:
+        abort(404, description="找不到使用者")
+    user.set_password(new_password)
+    db.session.commit()
+    return jsonify({"message": "密碼已重設成功"}), 200
