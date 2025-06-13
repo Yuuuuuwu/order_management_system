@@ -33,6 +33,11 @@ services:
         # SQLAlchemy 連線字串，host 設為 db(service 名稱)
       JWT_SECRET_KEY: your-jwt-secret # 用於 JWT 認證的密鑰
       SECRET_KEY: your-secret-key # Flask session 等需要的密鑰 (若不使用可移除)
+      ECPAY_MERCHANT_ID: 3002607
+      ECPAY_HASH_KEY: pwFHCqoQZGmho4w6
+      ECPAY_HASH_IV: EkRm7iFT261dpevs
+      ECPAY_NOTIFY_URL: http://localhost:5000/payments/ecpay/callback
+      ECPAY_RETURN_URL: http://localhost:3000/payment_result
     ports:
       - "5000:5000" # 將容器 5000 port 暴露到本機 5000
     volumes:

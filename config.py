@@ -7,6 +7,13 @@ class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     # 可擴充更多共用設定
 
+    # 綠界支付參數
+    ECPAY_MERCHANT_ID = "3002607"
+    ECPAY_HASH_KEY    = "pwFHCqoQZGmho4w6"
+    ECPAY_HASH_IV     = "EkRm7iFT261dpevs"
+    ECPAY_NOTIFY_URL = os.getenv("ECPAY_NOTIFY_URL", "http://localhost:5000/payments/ecpay/callback")
+    ECPAY_RETURN_URL = os.getenv("ECPAY_RETURN_URL", "http://localhost:3000/payment_result")
+
 class DevelopmentConfig(BaseConfig):
     """開發環境設定"""
     DEBUG = True

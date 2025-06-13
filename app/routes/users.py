@@ -4,6 +4,7 @@ from marshmallow import ValidationError
 from app import db
 from app.models import User
 from app.schemas import user_schema   # 你已有的 UserSchema 實例
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 bp_users = Blueprint('users', __name__, url_prefix='/users')
 
@@ -41,8 +42,10 @@ def create_user():
                         "name": "Bad Request",
                         "errors": err.messages}), 400
 
-    # 讀取角色，預設為 user
-    role = payload.get('role', 'user')
+    # 讀取角色，預設為 customer
+    role = payload.get('role', 'customer')
+    if role not in ("admin", "seller", "customer"):
+        return jsonify({"code": 400, "name": "Bad Request", "errors": {"role": "role 必須是 'admin', 'seller' 或 'customer'"}}), 400
     # 建立新使用者
     user = User(
         username=valid['username'],
@@ -63,10 +66,10 @@ def create_user():
 
 # ─────────────  Read all  ─────────────
 @bp_users.route('', methods=['GET'])
-def get_users():
-
+@jwt_required()
+def list_users():
     """
-    取得所有使用者 (List users)
+    取得使用者列表 (List users)
     ---
     tags:
       - Users
@@ -76,21 +79,29 @@ def get_users():
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/User'
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/User'
+                total:
+                  type: integer
     """
 
-    users = User.query.all()
-    return jsonify([
-        {"id": u.id, "username": u.username, "email": u.email, "role": u.role}
-        for u in users
-    ]), 200
+    claims = get_jwt()
+    if claims.get('role') == 'admin':
+        qs = User.query.order_by(User.created_at)
+    else:
+        uid = int(get_jwt_identity())
+        qs = User.query.filter_by(id=uid)
+    users = [u.to_dict() for u in qs]
+    return jsonify({"data": users, "total": len(users)}), 200
 
 # ─────────────  Read one  ─────────────
 @bp_users.route('/<int:user_id>', methods=['GET'])
+@jwt_required()
 def get_user(user_id):
-
     """
     取得單一使用者 (Get user by ID)
     ---
@@ -114,11 +125,12 @@ def get_user(user_id):
         description: 使用者不存在
     """
 
-    u = User.query.get_or_404(user_id, description="找不到使用者 (User not found)")
-    return jsonify({"id": u.id,
-                    "username": u.username,
-                    "email": u.email,
-                    "role": u.role}), 200
+    claims = get_jwt()
+    uid = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+    if claims.get('role') != 'admin' and user.id != uid:
+        return jsonify({'msg': 'Permission denied'}), 403
+    return jsonify(user.to_dict())
 
 # ─────────────  Update  ─────────────
 @bp_users.route('/<int:user_id>', methods=['PUT'])
@@ -168,9 +180,11 @@ def update_user(user_id):
     if 'email' in valid:
         u.email = valid['email']
     if 'role' in payload:
+        if payload['role'] not in ("admin", "seller", "customer"):
+            return jsonify({"code": 400, "name": "Bad Request", "errors": {"role": "role 必須是 'admin', 'seller' 或 'customer'"}}), 400
         u.role = payload['role']
     if 'password' in payload:
-        user.set_password(payload['password'])
+        u.set_password(payload['password'])
     db.session.commit()
     return jsonify({"id": u.id,
                     "username": u.username,

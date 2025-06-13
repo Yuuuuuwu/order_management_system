@@ -40,6 +40,15 @@ app/
 - `forms/`：表單驗證，與前端欄位對應。
 - `routes/`：API 路由，分資源模組化。
 
+## 綠界支付（ECPay）模擬
+- `/payments/ecpay/<order_id>`：產生綠界付款連結與參數（POST，需 JWT）
+- `/payments/ecpay/callback`：綠界付款通知（ECPay 伺服器呼叫，會自動更新訂單狀態）
+- 請參考 [ECPay 官方文件](https://developers.ecpay.com.tw/?p=2856)
+
+## 最佳化與部署
+- 已支援 Docker、環境變數、CORS、JWT、資料庫自動 migrate
+- 請於 `.env` 設定金鑰與 ECPay 測試參數
+
 ---
 
 如需更多說明，請參考原始碼註解。

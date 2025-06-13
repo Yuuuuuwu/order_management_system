@@ -18,6 +18,9 @@ db = SQLAlchemy()
 import app.models.user, app.models.product, app.models.order, app.models.payment
 import app.schemas.user, app.schemas.product, app.schemas.order, app.schemas.payment
 import app.services.auth_service, app.services.user_service, app.services.product_service, app.services.order_service, app.services.payment_service
+from app.routes.dashboard import bp_dashboard
+from app.routes.categories import bp_categories
+from .routes import customers_bp, reports_bp
 
 def create_app():
     app = Flask(__name__)
@@ -36,13 +39,17 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": "*"}})
 
     # Blueprint 註冊
-    from app.routes import auth, main, users, products, orders, payments
+    from app.routes import auth, main, users, products, orders, payments, customers
     app.register_blueprint(auth.bp_auth)
     app.register_blueprint(main.bp_main)
     app.register_blueprint(users.bp_users)
     app.register_blueprint(products.bp_prod)
     app.register_blueprint(orders.bp_orders)
     app.register_blueprint(payments.bp_pay)
+    app.register_blueprint(bp_dashboard)
+    app.register_blueprint(bp_categories)
+    app.register_blueprint(customers_bp)
+    app.register_blueprint(reports_bp)
 
     # 全域錯誤處理
     from marshmallow import ValidationError

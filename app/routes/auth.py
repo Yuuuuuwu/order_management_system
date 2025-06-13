@@ -56,8 +56,8 @@ def register():
         abort(400, description=f"缺少欄位: {', '.join(missing)}")
 
     # # 修改：驗證 role 值
-    if data['role'] not in ("admin", "user"):
-        abort(400, description="role 必須是 'admin' 或 'user'")
+    if data['role'] not in ("admin", "seller", "customer"):
+        abort(400, description="role 必須是 'admin', 'seller' 或 'customer'")
 
     if User.query.filter_by(username=data['username']).first():
         abort(400, description="使用者名稱已存在")
@@ -67,7 +67,7 @@ def register():
     user = User(
         username=data['username'],
         email=data['email'],
-        role=data['role']               # # 修改：把 role 存進 model
+        role=data['role']
     )
     user.password_hash = generate_password_hash(data['password'])
     db.session.add(user)
