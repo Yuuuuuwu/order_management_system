@@ -46,3 +46,6 @@ Thumbs.db
 # ECPay 測試金鑰等敏感資訊
 *.ecpay*
 node_modules
+
+#前端資料夾
+oms-frontend-antd/

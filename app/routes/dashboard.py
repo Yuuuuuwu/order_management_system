@@ -11,7 +11,7 @@ bp_dashboard = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 def summary():
     claims = get_jwt()
     # 僅 admin 可看全部統計
-    if claims.get('role') != 'admin':
+    if claims.get('role') not in ['admin', 'manager']:
         return jsonify({'msg': 'Permission denied'}), 403
     total_sales = db.session.query(func.sum(Order.amount)).scalar() or 0
     order_count = db.session.query(func.count(Order.id)).scalar() or 0

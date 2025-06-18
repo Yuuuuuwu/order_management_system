@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, abort, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import db
 from app.models import Order, Payment
+from app.services.notification_service import create_notification
+from app.utils.check_mac_value import verify_check_mac_value
 import hashlib
 import urllib.parse
 from datetime import datetime
@@ -111,6 +113,7 @@ def ecpay_pay_order(order_id):
         'ItemName':          'OMS商品x1',
         'ReturnURL':         notify_url,
         'ClientBackURL':     return_url,
+        'OrderResultURL':    f"{return_url}?orderId={order.id}&tradeNo={trade_no}",
         'ChoosePayment':     'ALL',
         'EncryptType':       1,
     }
@@ -155,11 +158,17 @@ def ecpay_callback():
     data = request.form.to_dict()
     trade_no = data.get('MerchantTradeNo')
     rtn_code = data.get('RtnCode')
-    # 這裡可加 CheckMacValue 驗證
+    check_mac_value = data.get('CheckMacValue')
+
+    current_app.logger.info(f"接收到的回調資料: {data}")
+    current_app.logger.info(f"驗證結果: {verify_check_mac_value(data)}")
+
     if rtn_code == '1':
+        current_app.logger.info(f"交易成功，訂單編號: {trade_no}")
         try:
             order_id = int(trade_no.replace('OMS', '')[:-10])
-        except Exception:
+        except Exception as e:
+            current_app.logger.error(f"解析訂單編號失敗: {e}")
             return 'fail'
         order = Order.query.get(order_id)
         if order:
@@ -174,7 +183,16 @@ def ecpay_callback():
             )
             db.session.add(payment)
             db.session.commit()
-        return '1|OK'
+            current_app.logger.info("訂單狀態更新成功")
+
+            create_notification(
+                user_id=order.user_id,
+                type='payment_success',
+                title='付款成功',
+                content=f'您的訂單 {order.order_sn} 已完成付款。'
+            )
+
+            return '1|OK'
     return '0|FAIL'
 
 @bp_pay.route('', methods=['GET'])
