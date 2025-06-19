@@ -1,5 +1,5 @@
 # app/routes/payments.py
-from flask import Blueprint, jsonify, abort, request, current_app
+from flask import Blueprint, jsonify, abort, request, current_app, redirect
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import db
 from app.models import Order, Payment
@@ -8,6 +8,7 @@ from app.utils.check_mac_value import verify_check_mac_value
 import hashlib
 import urllib.parse
 from datetime import datetime
+from urllib.parse import quote
 
 bp_pay = Blueprint('payments', __name__, url_prefix='/payments')
 
@@ -111,9 +112,9 @@ def ecpay_pay_order(order_id):
         'TotalAmount':       int(order.total_amount),
         'TradeDesc':         'OMS訂單付款',
         'ItemName':          'OMS商品x1',
-        'ReturnURL':         notify_url,
-        'ClientBackURL':     return_url,
-        'OrderResultURL':    f"{return_url}?orderId={order.id}&tradeNo={trade_no}",
+        'ReturnURL':         current_app.config['ECPAY_NOTIFY_URL'],
+        'ClientBackURL':     current_app.config['FRONTEND_URL'] + "/payments/payment_result",
+        'OrderResultURL':    current_app.config['ECPAY_ORDER_RETURN_URL'],
         'ChoosePayment':     'ALL',
         'EncryptType':       1,
     }
@@ -136,19 +137,40 @@ def ecpay_pay_order(order_id):
 
       # 4. 做 SHA256，hex → 再轉大寫
       return hashlib.sha256(urlenc.encode('utf-8')).hexdigest().upper()
-
-
+    # 5. 計算 CheckMacValue
     raw_params['CheckMacValue'] = gen_mac(raw_params)
-
-    # 準備前端 form 要送出的欄位，全部 quote()
-    send_params = {k: str(v) for k, v in raw_params.items()}
+    send_params = { k: str(v) for k, v in raw_params.items() }
 
     return jsonify({
         'ecpay_url': base_url,
         'params':    send_params
     })
 
+@bp_pay.route('/ecpay/return', methods=['POST'])
+def ecpay_return():
+    """
+    綠界自動導回 (OrderResultURL) → 讀 POST 表單 → 轉 GET 重導到前端
+    """
+    data = request.form.to_dict()
+    trade_no = data.get('MerchantTradeNo')
+    rtn_code = data.get('RtnCode')
 
+    # 假設你的 order_sn 就存於 Order model
+    # 於回調裡可以依 trade_no 解析訂單 id 或查資料庫拿 order_sn
+    order_id = int(trade_no.replace('OMS', '')[:-10])
+    order = Order.query.get(order_id)
+    order_sn = order.order_sn if order else ''
+
+    # 組成前端要的 URL (使用你的前端網域與路由)
+    client_url = current_app.config.get('FRONTEND_URL')
+    redirect_to = (
+      f"{client_url}/payments/payment_result"
+      f"?order_sn={quote(order_sn)}"
+      f"&tradeNo={quote(trade_no)}"
+      f"&RtnCode={quote(rtn_code)}"
+    )
+
+    return redirect(redirect_to)
 
 @bp_pay.route('/ecpay/callback', methods=['POST'])
 def ecpay_callback():
@@ -182,6 +204,9 @@ def ecpay_callback():
                 paid_at=datetime.now()
             )
             db.session.add(payment)
+            # 新增：寫入訂單歷程
+            from app.models.order import OrderHistory
+            db.session.add(OrderHistory(order_id=order.id, status='paid', operator=str(order.user_id), operated_at=datetime.now(), remark='付款完成'))
             db.session.commit()
             current_app.logger.info("訂單狀態更新成功")
 

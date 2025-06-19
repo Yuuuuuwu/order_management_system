@@ -56,6 +56,22 @@ def get_order(order_id):
         return jsonify({'msg': 'Permission denied'}), 403
     return jsonify(order.to_dict(include_items=True, include_history=True))
 
+# 以 order_sn 查訂單
+@bp_orders.route('/sn/<string:order_sn>', methods=['GET'])
+@jwt_required()
+def get_order_by_sn(order_sn):
+    """
+    以 order_sn（訂單編號）取得訂單
+    GET /orders/sn/{order_sn}
+    """
+    claims = get_jwt()
+    uid = int(get_jwt_identity())
+    order = Order.query.filter_by(order_sn=order_sn).first_or_404()
+    if claims.get('role') != 'admin' and order.user_id != uid:
+        abort(403, description="Permission denied")
+    return jsonify(order.to_dict(include_items=True, include_history=True)), 200
+
+
 @bp_orders.route('/<int:order_id>/history', methods=['GET'])
 @jwt_required()
 def get_order_history(order_id):
@@ -134,6 +150,14 @@ def create_order():
         db.session.add(OrderItem(order_id=order.id, product_id=item['product_id'], product_name=item['product_name'], qty=item['qty'], price=item['price']))
     # 狀態歷史
     db.session.add(OrderHistory(order_id=order.id, status='pending', operator=str(user_id), operated_at=datetime.now(), remark='訂單建立'))
+    # 扣減商品庫存
+    for item in items:
+        product = Product.query.get(item['product_id'])
+        if not product:
+            abort(400, description=f"找不到商品 {item['product_id']}")
+        if product.stock < item['qty']:
+            abort(400, description=f"商品 {product.name} 庫存不足")
+        product.change_stock(-item['qty'])
     db.session.commit()
     return jsonify(order.to_dict(include_items=True, include_history=True)), 201
 
