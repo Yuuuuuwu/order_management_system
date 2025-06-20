@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 # 載入根目錄下的 .env 檔
-load_dotenv()
+load_dotenv(override=True, interpolate=True)
 
 class BaseConfig:
     """共用設定"""

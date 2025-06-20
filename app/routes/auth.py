@@ -69,6 +69,8 @@ def register():
         email=data['email'],
         role=data['role']
     )
+    if 'phone' in data and data['phone']:
+        user.phone = data['phone']
     user.password_hash = generate_password_hash(data['password'])
     db.session.add(user)
     db.session.commit()
@@ -96,6 +98,11 @@ def login():
     user = User.query.filter_by(email=data.get('email')).first()
     if not user or not check_password_hash(user.password_hash, data.get('password', '')):
         abort(401, description="帳號或密碼錯誤")
+
+    # 新增：登入成功時更新 last_login
+    from datetime import datetime
+    user.last_login = datetime.now()
+    db.session.commit()
 
     token = create_access_token(
         identity=str(user.id),

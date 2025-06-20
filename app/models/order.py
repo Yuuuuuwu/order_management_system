@@ -39,6 +39,8 @@ class Order(db.Model):
             "shipping_address": self.shipping_address,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            # 新增 user 資訊
+            "user": self.user.to_dict() if hasattr(self, 'user') and self.user else None,
         }
         if include_items:
             data["items"] = [item.to_dict() for item in self.items]
