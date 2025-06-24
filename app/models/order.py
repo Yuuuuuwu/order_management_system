@@ -1,9 +1,11 @@
 from app import db
 from datetime import datetime
+from app.models.user import User  # 確保有 import User 模型
 
 class Order(db.Model):
     """訂單資料表"""
     __tablename__ = 'orders'
+
     id = db.Column(db.Integer, primary_key=True)
     order_sn = db.Column(db.String(64), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -18,12 +20,15 @@ class Order(db.Model):
     shipping_address = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
-    # 新增關聯
+
+    # 關聯設定
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
     histories = db.relationship('OrderHistory', backref='order', lazy=True, cascade="all, delete-orphan")
     customer = db.relationship('Customer', back_populates='orders')
+    user = db.relationship('User', backref='orders', lazy=True)  # 加入 user 關聯
 
-    def to_dict(self, include_items=False, include_history=False):
+    def to_dict(self, include_items=False, include_history=False, include_user=False):
+        """轉換為 dict，可選擇是否包含明細、歷史、使用者資料"""
         data = {
             "id": self.id,
             "order_sn": self.order_sn,
@@ -39,13 +44,13 @@ class Order(db.Model):
             "shipping_address": self.shipping_address,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
-            # 新增 user 資訊
-            "user": self.user.to_dict() if hasattr(self, 'user') and self.user else None,
         }
         if include_items:
             data["items"] = [item.to_dict() for item in self.items]
         if include_history:
             data["history"] = [h.to_dict() for h in self.histories]
+        if include_user:
+            data["user"] = self.user.to_dict() if self.user else None
         return data
 
 class OrderItem(db.Model):

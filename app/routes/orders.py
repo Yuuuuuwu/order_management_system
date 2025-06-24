@@ -3,6 +3,7 @@ from app import db
 from app.models import Order, OrderItem, OrderHistory, Product
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import or_, and_, func
+from sqlalchemy.orm import joinedload  # 重要，為了一起查出 user
 from datetime import datetime
 import random
 from app.services.notification_service import log_operation, create_notification
@@ -12,9 +13,7 @@ bp_orders = Blueprint('orders', __name__, url_prefix='/orders')
 @bp_orders.route('', methods=['GET'])
 @jwt_required()
 def list_orders():
-    """
-    取得訂單列表，支援分頁、篩選、關鍵字、狀態、排序
-    """
+    """取得訂單列表，支援分頁、篩選、關鍵字、狀態、排序，並帶出 user"""
     claims = get_jwt()
     uid = int(get_jwt_identity())
     page = int(request.args.get('page', 1))
@@ -25,7 +24,9 @@ def list_orders():
     keyword = request.args.get('keyword')
     sort_by = request.args.get('sort_by', 'created_at')
     sort_order = request.args.get('sort_order', 'desc')
-    q = Order.query
+
+    q = Order.query.options(joinedload(Order.user))  # 關鍵，避免 N+1 查詢
+
     if claims.get('role') != 'admin':
         q = q.filter_by(user_id=uid)
     if status:
@@ -36,13 +37,16 @@ def list_orders():
         q = q.filter(Order.created_at <= date_end)
     if keyword:
         q = q.filter(or_(Order.order_sn.like(f"%{keyword}%"), Order.remark.like(f"%{keyword}%"), Order.receiver_name.like(f"%{keyword}%")))
+
     if sort_by in ['created_at', 'total_amount', 'status']:
         sort_col = getattr(Order, sort_by)
         q = q.order_by(sort_col.desc() if sort_order == 'desc' else sort_col.asc())
+
     total = q.count()
     orders = q.offset((page-1)*page_size).limit(page_size).all()
+
     return jsonify({
-        "data": [o.to_dict(include_items=True) for o in orders],
+        "data": [o.to_dict(include_items=True, include_user=True) for o in orders],
         "total": total
     })
 
@@ -54,7 +58,8 @@ def get_order(order_id):
     order = Order.query.get_or_404(order_id)
     if claims.get('role') != 'admin' and order.user_id != uid:
         return jsonify({'msg': 'Permission denied'}), 403
-    return jsonify(order.to_dict(include_items=True, include_history=True))
+    # 修改：include_user=True
+    return jsonify(order.to_dict(include_items=True, include_history=True, include_user=True))
 
 # 以 order_sn 查訂單
 @bp_orders.route('/sn/<string:order_sn>', methods=['GET'])

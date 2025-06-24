@@ -13,7 +13,8 @@ def summary():
     # 僅 admin 可看全部統計
     if claims.get('role') not in ['admin', 'manager']:
         return jsonify({'msg': 'Permission denied'}), 403
-    total_sales = db.session.query(func.sum(Order.amount)).scalar() or 0
+    # 修正欄位名稱錯誤
+    total_sales = db.session.query(func.sum(Order.total_amount)).scalar() or 0
     order_count = db.session.query(func.count(Order.id)).scalar() or 0
     customer_count = db.session.query(func.count(User.id)).scalar() or 0
     return jsonify({

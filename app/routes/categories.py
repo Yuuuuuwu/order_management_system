@@ -7,14 +7,14 @@ from flask_jwt_extended import jwt_required, get_jwt
 bp_categories = Blueprint('categories', __name__, url_prefix='/categories')
 
 @bp_categories.route('', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def list_categories():
     """取得所有分類（巢狀結構）"""
     roots = Category.query.filter_by(parent_id=None).all()
     return jsonify(categories_schema.dump(roots))
 
 @bp_categories.route('/<int:cid>', methods=['GET'])
-@jwt_required()
+@jwt_required(optional=True)
 def get_category(cid):
     cat = Category.query.get_or_404(cid)
     return jsonify(category_schema.dump(cat))

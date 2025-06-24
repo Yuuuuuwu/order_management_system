@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from marshmallow import ValidationError
 from app import db
 from app.models import User
-from app.schemas import user_schema   # 你已有的 UserSchema 實例
+from app.schemas import user_schema
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 bp_users = Blueprint('users', __name__, url_prefix='/users')
@@ -33,36 +33,29 @@ def create_user():
       400:
         description: 欄位驗證失敗
     """
-
     payload = request.get_json() or {}
     try:
-        valid = user_schema.load(payload)          # 必填 & email 格式驗證
+        valid = user_schema.load(payload)
     except ValidationError as err:
-        return jsonify({"code": 400,
-                        "name": "Bad Request",
-                        "errors": err.messages}), 400
+        return jsonify({"code": 400, "name": "Bad Request", "errors": err.messages}), 400
 
-    # 讀取角色，預設為 customer
     role = payload.get('role', 'customer')
     if role not in ("admin", "seller", "customer"):
         return jsonify({"code": 400, "name": "Bad Request", "errors": {"role": "role 必須是 'admin', 'seller' 或 'customer'"}}), 400
-    # 建立新使用者
+
     user = User(
         username=valid['username'],
         email=valid['email'],
-        role=role
+        role=role,
+        phone=valid.get('phone')
     )
-    # 若有提供密碼，則設定
     if 'password' in payload:
         user.set_password(payload['password'])
 
     db.session.add(user)
     db.session.commit()
 
-    return jsonify({"id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "role": user.role}), 201
+    return jsonify(user.to_dict()), 201
 
 # ─────────────  Read all  ─────────────
 @bp_users.route('', methods=['GET'])
@@ -165,31 +158,28 @@ def update_user(user_id):
       404:
         description: 使用者不存在
     """
-
     payload = request.get_json() or {}
     try:
-        valid = user_schema.load(payload, partial=True)  # 僅驗有給的欄位
+        valid = user_schema.load(payload, partial=True)
     except ValidationError as err:
-        return jsonify({"code": 400,
-                        "name": "Bad Request",
-                        "errors": err.messages}), 400
+        return jsonify({"code": 400, "name": "Bad Request", "errors": err.messages}), 400
 
-    u = User.query.get_or_404(user_id, description="找不到使用者 (User not found)")
+    u = User.query.get_or_404(user_id, description="找不到使用者")
     if 'username' in valid:
         u.username = valid['username']
     if 'email' in valid:
         u.email = valid['email']
+    if 'phone' in valid:
+        u.phone = valid['phone']
     if 'role' in payload:
         if payload['role'] not in ("admin", "seller", "customer"):
             return jsonify({"code": 400, "name": "Bad Request", "errors": {"role": "role 必須是 'admin', 'seller' 或 'customer'"}}), 400
         u.role = payload['role']
     if 'password' in payload:
         u.set_password(payload['password'])
+
     db.session.commit()
-    return jsonify({"id": u.id,
-                    "username": u.username,
-                    "email": u.email,
-                    "role": u.role}), 200
+    return jsonify(u.to_dict()), 200
 
 # ─────────────  Delete  ─────────────
 @bp_users.route('/<int:user_id>', methods=['DELETE'])
@@ -212,14 +202,14 @@ def delete_user(user_id):
       404:
         description: 使用者不存在
     """
-    u = User.query.get_or_404(user_id, description="找不到使用者 (User not found)")
+    u = User.query.get_or_404(user_id, description="找不到使用者")
     try:
         db.session.delete(u)
         db.session.commit()
-        return jsonify({"message": "使用者刪除成功 (User deleted successfully)"}), 200
+        return jsonify({"message": "使用者刪除成功"}), 200
     except Exception as e:
         db.session.rollback()
-        print("刪除錯誤：", e)  # 一定要有這行
+        print("刪除錯誤：", e)
         import traceback
-        traceback.print_exc()   # 這樣才會印完整 traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500

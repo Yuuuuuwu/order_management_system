@@ -32,8 +32,8 @@ services:
       - "5000:5000" # 將容器 5000 port 暴露到本機 5000
     volumes:
       - .:/app # 開發模式：本地程式碼變動即時生效
-    # 用 env 裡的 host/port 啟動
-    command: flask run --host=${FLASK_RUN_HOST} --port=${FLASK_RUN_PORT} # 啟動 Flask 伺服器，監聽所有網路介面
+    restart: unless-stopped # 增強穩定性，容器異常停止後自動重啟
+    command: flask run --host=0.0.0.0 --port=5000 # 啟動 Flask 伺服器
 
 volumes:
   db_data: # 定義外部 volume，用於存放 MySQL 資料

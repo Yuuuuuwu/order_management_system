@@ -22,11 +22,6 @@ COPY requirements.txt .
 RUN pip install --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt
 
-# 3.1 安裝 Flask-Migrate
-RUN pip install Flask-Migrate
-# 3.2 安裝其他必要的 Python 套件
-RUN pip install Flask-JWT-Extended Flask-Cors
-
 # 4. 複製程式碼
 COPY . .
 

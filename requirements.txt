@@ -41,3 +41,4 @@ gunicorn==20.1.0
 flask-wtf==1.2.2
 wtforms==3.2.1
 python-dotenv
+email_validator

@@ -12,4 +12,4 @@ echo "✅ Database is up, running migrations"
 flask db upgrade
 
 # 2. 啟動 Flask（生產建議 gunicorn）
-exec gunicorn -b 0.0.0.0:5000 run:app
+exec gunicorn --bind 0.0.0.0:5000 "app:create_app()"

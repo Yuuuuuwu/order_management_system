@@ -50,4 +50,6 @@ node_modules
 #前端資料夾
 oms-frontend-antd/
 # 前端相關
-*.json
+package-lock.json
+package.json
+package-lock.json
