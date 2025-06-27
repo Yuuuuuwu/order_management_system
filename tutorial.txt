@@ -1,0 +1,305 @@
+請先閱讀我的專案檔案 看我做到哪裡了 然後繼續教我以下專案進度
+
+🎯 專案名稱：Order Management System
+目標：展示後端開發技能，包括 API 設計、資料庫管理、認證機制、資料處理與部署。
+
+🔹 主要功能
+使用者註冊與登入
+
+JWT 認證 (Token-based authentication)
+
+OAuth2 整合（可選，增加亮點）
+
+商品管理
+
+CRUD 操作：新增、修改、刪除、查詢
+
+資料庫：MySQL 或 PostgreSQL
+
+訂單管理
+
+建立訂單、查詢訂單狀態、更新訂單、刪除訂單
+
+支援多個商品在單一訂單內
+
+支付處理
+
+模擬支付流程
+
+可考慮串接第三方支付（例如 PayPal、Stripe）
+
+後台管理
+
+管理員登入後可查看所有用戶、訂單資訊
+
+權限管理（Admin 與 User 權限區隔）
+
+🔹 技術選型
+項目	技術
+語言	Python (Flask) 或 Node.js (Express.js)
+資料庫	MySQL 或 PostgreSQL
+認證	JWT (JSON Web Token)
+部署	Docker + Nginx，伺服器架設在 AWS 或 Heroku
+版本控制	Git (GitHub)
+伺服器	Linux (Ubuntu) 或 Docker Container
+API 文件	Swagger 或 Postman Documentation
+測試	PyTest / Mocha + Chai
+資料庫管理	SQLAlchemy（Flask）或 Sequelize（Express）
+
+🔹 時間規劃
+週數	任務
+1	環境設置、資料庫設計、使用者登入註冊、JWT 認證
+2	商品管理的 CRUD、後台管理界面、權限設計
+3	訂單管理、訂單狀態更新、訂單歷史紀錄
+4	支付模擬、API 文件生成 (Swagger)、測試撰寫
+5	Docker 化部署、伺服器設置、Nginx 設定
+6	測試與 Debug、撰寫簡報資料、準備面試問題
+
+🔹 展示重點
+完整 API 文件 (Swagger)
+
+高效能資料庫操作
+
+清楚的資料庫 Schema 設計
+
+JWT 認證和權限控制
+
+測試覆蓋率與資料驗證
+
+Docker 與 Nginx 的部署流程
+
+Git 版本管理紀錄
+
+
+###########################################################################################################################
+pip freeze > requirements.txt
+
+
+###########################################################################################################################
+
+python3 -m venv venv
+
+source venv/bin/activate
+
+############################################################################################################################
+
+pip install \
+flask \
+flask-sqlalchemy \
+flask-migrate \
+flask-jwt-extended \
+flasgger \
+marshmallow \
+pymysql \
+werkzeug \
+pytest \
+flask-cors \
+python-dotenv \
+cryptography
+
+
+MySQL
+
+mysql -u jenny -p
+USE order_management;
+SHOW TABLES;
+
+curl -X POST http://localhost:5000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "jennytest", "email": "@example.com", "password": "1234"}'
+
+
+
+TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0NzU2NTkwNywianRpIjoiOGMxZDNiMmItMzY3Ni00NjZlLTgxN2YtN2UyZDcxOGQ5N2FiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjIiLCJuYmYiOjE3NDc1NjU5MDcsImNzcmYiOiJiN2YxMmFlNS1mYmIyLTQzMzYtODFjMy03YWMzMGY0MzIyZjQiLCJleHAiOjE3NDc1NjY4MDcsInJvbGUiOiJ1c2VyIn0.Skcx7sNGgreL-qFNWXicYYUZaTlN0Z6HeSyzWPnpbp8
+
+
+登入拿TOKEN
+TOKEN=$(curl -s -X POST http://localhost:5000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"jennytest","password":"1234"}' \
+  | jq -r '.access_token')
+echo $TOKEN
+
+swaggerAPI測試:
+http://127.0.0.1:5000/apidocs/
+
+
+#################################################################安裝套件####################################################
+
+pip install --upgrade pip           # （可選）先把 pip 更新到最新版
+pip install -r requirements.txt     # 安裝所有列在裡面的套件
+
+###################################################################DOCEKR#####################################################
+
+sudo usermod -aG docker $USER 以有權限的使用者登入
+
+newgrp docker 重登 
+
+
+docker-compose up -d --build 建置Docker
+
+
+docker-compose down
+docker-compose up -d --build
+
+
+
+#########################################################MySQL Docker 0522############################################################################
+
+@@@@看功能(表格)有哪些
+docker-compose exec db \
+  mysql -ujenny -p1234 my_db \
+  -e "SHOW TABLES;"
+
+
+@@@@創立使用者
+curl -X POST http://localhost:5000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"jenny","email":"jenny@test.com","password":"1234"}'
+
+@@@@登入使用者
+curl -X POST http://localhost:5000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"jenny","password":"1234"}'
+
+@@@@存取TOKEN
+TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0NzkyMTM0MiwianRpIjoiNWM0ODE2ZmMtMzg3OC00MDBlLWJlYTEtYjM5OTdkMzY4ZjJkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEiLCJuYmYiOjE3NDc5MjEzNDIsImNzcmYiOiI5YWVhMmM5NC0yNTUxLTQwOWEtODcwZC00ZjQzZjA0YTY3MWUiLCJleHAiOjE3NDc5MjIyNDIsInJvbGUiOiJ1c2VyIn0.K6JXRrfI_9_hUKXh7Ld26iNe4N2i0le0C0RsacE2qBs
+curl http://localhost:5000/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+
+@@@@升級 jenny 為admin管理者
+# 進入 MySQL 容器
+docker-compose exec db mysql -ujenny -p1234 my_db
+@
+# 在 MySQL prompt 裡執行
+UPDATE users SET role='admin' WHERE username='jenny';
+EXIT;
+
+@@@@取得admin管理者 token
+# 登入並把回傳的 token 存到環境變數 ADMIN_TOKEN
+ADMIN_TOKEN=$(
+  curl -s -X POST http://localhost:5000/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"jenny","password":"1234"}' \
+  | jq -r .access_token
+)
+echo $ADMIN_TOKEN
+
+
+#############################################################CRUD測試#########################################################################
+
+@@@@列出所有商品
+curl http://localhost:5000/products
+# 回傳空陣列或現有商品列表
+
+@@@@新增商品
+curl -X POST http://localhost:5000/products \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":  "Widget",
+    "price": 9.99,
+    "stock": 100,
+    "desc":  "A sample widget"
+  }'
+# 201 回傳剛建立的商品 JSON
+
+@@@@取得單一商品（GET /products/{id}）
+curl http://localhost:5000/products/1
+# 200 回傳該商品詳細
+
+
+@@@@更新商品（PUT /products/{id}）
+curl -X PUT http://localhost:5000/products/1 \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "price": 12.50,
+    "stock":  80
+  }'
+# 200 回傳更新後的商品 JSON
+
+@@@@刪除商品 
+curl -X DELETE http://localhost:5000/products/1 \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+# 204 無主體回應
+
+
+####################################################################Git#######################################################################
+
+
+
+
+git status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#################################################################3
+實作建議
+後端
+
+保持現有 Flask + SQLAlchemy + JWT 架構。
+
+用 Flasgger 或 FastAPI 寫好完整 OpenAPI 文件，包含所有 CRUD、認證流程。
+
+前端
+
+選一個你比較熟的框架（React.js 建議搭配 Create-React-App + TypeScript）。
+
+用 axios 或 typescript-axios（由 OpenAPI Generator 產生）呼叫後端 API。
+
+實作：商品列表 / 詳細 / 購物車 / 結帳 / 登入／註冊 5 大頁面。
+
+部署
+
+後端打包成 Docker image，部署到 Heroku/AWS/GCP。
+
+前端打包成靜態網站，部署到 Netlify/Vercel。
+
+README
+
+清楚寫出：專案架構圖、API 說明、運行步驟、環境變數、Demo 截圖。
+
+加上 C4 架構圖、ER 圖、時序圖，凸顯你對軟體工程流程的重視。
+
+總結：
+若時間允許，強烈建議採「API-First + 獨立前端 SPA」方案，既能展示你深厚的後端實力，也能加分你的前端能力與完整交付流程，讓面試官一看就知道你具備現代全棧開發實戰經驗
+
+########################git push#############################3
+git add .
+git commit -m "0525"
+git push -u origin feature/your-branch
+git push
+
+
+
+######################migration 要在docker建出來的資料庫中進行############
+
+docker exec -it oms_app bash 
+docker exec -it oms_db bash 
+
+
+echo $DATABASE_URL
+
+ls
+# 你應該能看到 app 程式碼與 migrations 目錄
+
+flask db migrate -m "Add customer, amount, status, date, remark to Order"
+flask db upgrade
+
+
+exit
+
+############################################################################

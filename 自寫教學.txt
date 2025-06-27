@@ -1,0 +1,173 @@
+#makefile沒有作用在docker裡的資料庫
+#seed_data.py載入後 user的資料表不正確 載入時有email_verified ，原本models/user裡沒有 已修改完畢
+
+
+##############################################################################
+注意.env檔案不會推上github上
+需要手動備份
+
+手動容器內遷移資料庫:
+# Step1：確保容器已經啟動（且 entrypoint.sh 跑完 migrations 了）
+docker compose up -d
+
+# Step2：進到 app 容器
+docker compose exec app bash
+
+# Step3：在容器內執行 migrate
+export FLASK_APP=run.py
+export DATABASE_URL=mysql+pymysql://jenny:1234@db:3306/my_db
+flask db migrate -m "seed_data.py"
+flask db upgrade
+
+# Exit
+exit
+
+#############################################################################
+
+app/
+├── models/       # 資料庫結構定義 (SQLAlchemy ORM)
+├── schemas/      # 資料轉 JSON、格式驗證 (Marshmallow)
+├── services/     # 商業邏輯、資料庫操作
+├── routes/       # API 路由定義 (Blueprint)
+├── utils/        # 工具函式 (密碼、JWT、金流驗證...)
+├── forms/        # 表單資料驗證 (WTForms、Marshmallow)
+├── __init__.py   # 應用初始化，註冊 Blueprint
+└── config.py     # 環境設定
+
+
+[前端請求]
+      │
+      ▼
+[app/routes/*]    路由層
+      │   定義 URL、權限、驗證、回傳 JSON
+      ▼
+[app/forms/*]     表單驗證層 (部分)
+[app/schemas/*]   JSON 格式與結構驗證
+      │
+      ▼
+[app/services/*]  商業邏輯層
+      │   實際處理資料庫、新增、查詢、運算
+      ▼
+[app/models/*]    資料庫層
+      │   ORM 定義、表結構、關聯設定
+      ▼
+[資料庫]          MySQL (或其他)
+      │
+      ▼
+[回傳 JSON 結果]
+
+
+
+
+
+
+
+
+## app/utils
+email.py【寄信工具】
+jwt.py【JWT 工具】
+password.py【密碼加密驗證】
+check_mac_value.py【綠界 CheckMacValue 驗證】
+__init__.py【集中出口】
+
+utils ：
+
+放通用小功能。
+
+簡化其他模組的 import。
+
+集中管理密碼、JWT、寄信、金流驗證這些不屬於主要業務邏輯的部分。
+
+
+
+## app/services
+
+auth_service.py【註冊、登入邏輯】
+user_service.py【用戶管理邏輯】
+product_service.py【商品與分類邏輯】
+order_service.py【訂單邏輯】
+payment_service.py【付款資料邏輯】
+customer_service.py【客戶資料邏輯】
+report_service.py【報表邏輯】
+notification_service.py【通知與操作紀錄】
+__init__.py【集中匯出】
+
+
+*「商業邏輯層」**，簡單來說，它們的功能是：
+
+✅ 負責處理資料庫操作、資料運算、邏輯判斷
+✅ 不直接處理 HTTP 請求（那是 routes 負責的事）
+✅ 幫助 routes 保持乾淨，routes 只負責組接收請求、呼叫 service、回應結果
+
+這種結構非常常見於 Flask、Django、FastAPI 等專案，符合所謂「MVC 分層」或「Service 層設計」。
+
+
+## app/routes
+
+auth.py【用戶認證 API】
+main.py【基本測試 API】
+categories.py【商品分類管理 API】
+checkout.py【結帳流程 API】
+customers.py【客戶管理 API】
+dashboard.py【儀表板統計 API】
+__init__.py【集中註冊 Blueprint 用】
+orders.py【訂單管理 API】
+payments.py【付款相關 API】
+products.py【商品管理 API】
+reports.py【報表與匯出 API】
+users.py【使用者管理 API】
+notifications.py【通知與操作日誌 API】
+
+
+## app/schemas
+
+user.py【使用者資料結構與驗證】
+product.py【商品與分類結構】
+order.py【訂單、訂單明細、歷史紀錄結構】
+payment.py【付款紀錄結構】
+customer.py【客戶資料結構】
+notification.py【通知與操作紀錄結構】
+__init__.py【集中匯出 Schema 用】
+
+
+## app/models
+
+user.py【使用者資料表】
+product.py【商品與分類資料表】
+order.py【訂單相關資料表】
+payment.py【付款紀錄資料表】
+customer.py【客戶資料表】
+operation_log.py【操作日誌資料表】
+notification.py【通知資料表】
+__init__.py【集中匯出模型】
+
+## app/forms
+
+order_form.py【訂單資料驗證】
+payment_form.py【付款資料驗證】
+product_form.py【商品與分類驗證】
+user_form.py【使用者註冊與登入驗證】
+customer_form.py【客戶表單驗證】
+__init__.py【集中匯出表單】
+
+
+app/forms/ 目錄，屬於整個專案的「表單驗證層」，簡單來說：
+
+✅ 處理前端送來資料時的格式驗證
+✅ 減少資料庫操作前的錯誤風險
+✅ 一部分用 marshmallow，一部分用 WTForms，這是可以接受的混合設計
+
+
+
+
+############################啟動#################################
+
+docker compose down -v #刪除
+
+sudo docker compose up -d --build
+
+sudo docker ps | grep 5000 #確認誰占用5000port
+
+
+
+
