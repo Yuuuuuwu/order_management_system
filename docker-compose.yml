@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: oms_db
+    restart: always # 容器異常停止後自動重啟
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword # MySQL root 密碼
+      MYSQL_DATABASE: my_db # 預設建立的資料庫名稱
+      MYSQL_USER: jenny # 建立的使用者名稱
+      MYSQL_PASSWORD: 1234 # 建立使用者的密碼
+    ports:
+      - "3307:3306" # 將本機 3307 port 轉到容器 3306 (方便本機連接)
+    volumes:
+      - db_data:/var/lib/mysql # 資料持久化到 named volume
+    healthcheck: # 健康檢查，確保 MySQL 啟動完成
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: . # 使用專案根目錄下的 Dockerfile
+    container_name: oms_app
+    depends_on:
+      db:
+        condition: service_healthy # 等待 db 容器健康後再啟動
+    env_file:
+      - .env # 使用 .env 檔案中的環境變數
+    ports:
+      - "5000:5000" # 將容器 5000 port 暴露到本機 5000
+    volumes:
+      - .:/app # 開發模式：本地程式碼變動即時生效
+    restart: unless-stopped # 增強穩定性，容器異常停止後自動重啟
+    command: >
+      sh -c "
+        flask db upgrade &&
+        python scripts/seed_data.py &&
+        flask run --host=0.0.0.0 --port=5000
+      "
+
+volumes:
+  db_data: # 定義外部 volume，用於存放 MySQL 資料
+
