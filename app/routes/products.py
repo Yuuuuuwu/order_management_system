@@ -6,10 +6,10 @@ from app import db
 from app.models.product import Product, Category
 from app.schemas.product import product_schema, products_schema
 
-bp_prod = Blueprint('products', __name__, url_prefix='/products')
+bp_products = Blueprint('products', __name__, url_prefix='/products')
 
 # 允許未登入（訪客）也能查詢商品
-@bp_prod.route('', methods=['GET'])
+@bp_products.route('', methods=['GET'])
 def list_products():
     """
     查詢商品清單，支援條件查詢（名稱、分類、上下架）、分頁、排序
@@ -33,13 +33,13 @@ def list_products():
         "total": total
     })
 
-@bp_prod.route('/<int:pid>', methods=['GET'])
+@bp_products.route('/<int:pid>', methods=['GET'])
 def get_product(pid):
     """取得單一商品"""
     p = Product.query.get_or_404(pid)
     return jsonify(product_schema.dump(p))
 
-@bp_prod.route('', methods=['POST'])
+@bp_products.route('', methods=['POST'])
 @jwt_required()
 def create_product():
     """新增商品"""
@@ -68,7 +68,7 @@ def create_product():
     db.session.commit()
     return jsonify(product_schema.dump(prod)), 201
 
-@bp_prod.route('/<int:pid>', methods=['PUT'])
+@bp_products.route('/<int:pid>', methods=['PUT'])
 @jwt_required()
 def update_product(pid):
     """編輯商品"""
@@ -80,7 +80,7 @@ def update_product(pid):
     db.session.commit()
     return jsonify(product_schema.dump(p))
 
-@bp_prod.route('/<int:pid>', methods=['DELETE'])
+@bp_products.route('/<int:pid>', methods=['DELETE'])
 @jwt_required()
 def delete_product(pid):
     """刪除商品"""
@@ -89,7 +89,7 @@ def delete_product(pid):
     db.session.commit()
     return jsonify({'msg': '商品已刪除'})
 
-@bp_prod.route('/batch/active', methods=['PUT'])
+@bp_products.route('/batch/active', methods=['PUT'])
 @jwt_required()
 def batch_active():
     """批次上下架商品"""
@@ -103,7 +103,7 @@ def batch_active():
     db.session.commit()
     return jsonify({'msg': '批次上下架完成'})
 
-@bp_prod.route('/<int:pid>/stock', methods=['PUT'])
+@bp_products.route('/<int:pid>/stock', methods=['PUT'])
 @jwt_required()
 def change_stock(pid):
     """庫存異動（進貨/銷售）"""
@@ -116,7 +116,7 @@ def change_stock(pid):
     db.session.commit()
     return jsonify(product_schema.dump(p))
 
-@bp_prod.route('/options', methods=['GET'])
+@bp_products.route('/options', methods=['GET'])
 @jwt_required()
 def product_options():
     """商品下拉選單用（id, name, price, stock）"""
