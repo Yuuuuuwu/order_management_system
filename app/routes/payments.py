@@ -10,9 +10,9 @@ import urllib.parse
 from datetime import datetime
 from urllib.parse import quote
 
-bp_pay = Blueprint('payments', __name__, url_prefix='/payments')
+bp_payments = Blueprint('payments', __name__, url_prefix='/payments')
 
-@bp_pay.route('/<int:order_id>', methods=['POST'])
+@bp_payments.route('/<int:order_id>', methods=['POST'])
 @jwt_required()
 def pay_order(order_id):
     """
@@ -68,7 +68,7 @@ def pay_order(order_id):
     db.session.commit()
 
     return jsonify(payment.to_dict()), 201
-@bp_pay.route('/ecpay/<int:order_id>', methods=['POST'])
+@bp_payments.route('/ecpay/<int:order_id>', methods=['POST'])
 @jwt_required()
 def ecpay_pay_order(order_id):
     """
@@ -146,7 +146,7 @@ def ecpay_pay_order(order_id):
         'params':    send_params
     })
 
-@bp_pay.route('/ecpay/return', methods=['POST'])
+@bp_payments.route('/ecpay/return', methods=['POST'])
 def ecpay_return():
     """
     綠界自動導回 (OrderResultURL) → 讀 POST 表單 → 轉 GET 重導到前端
@@ -172,7 +172,7 @@ def ecpay_return():
 
     return redirect(redirect_to)
 
-@bp_pay.route('/ecpay/callback', methods=['POST'])
+@bp_payments.route('/ecpay/callback', methods=['POST'])
 def ecpay_callback():
     """
     綠界付款結果通知 (模擬)
@@ -220,7 +220,7 @@ def ecpay_callback():
             return '1|OK'
     return '0|FAIL'
 
-@bp_pay.route('', methods=['GET'])
+@bp_payments.route('', methods=['GET'])
 @jwt_required()
 def list_payments():
     claims = get_jwt()
@@ -231,7 +231,7 @@ def list_payments():
         qs = Payment.query.join(Order).filter(Order.user_id == uid).order_by(Payment.created_at.desc())
     return jsonify([p.to_dict() for p in qs]), 200
 
-@bp_pay.route('/<int:payment_id>', methods=['GET'])
+@bp_payments.route('/<int:payment_id>', methods=['GET'])
 @jwt_required()
 def get_payment(payment_id):
     claims = get_jwt()

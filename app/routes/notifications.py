@@ -4,16 +4,16 @@ from app.models import Notification, OperationLog
 from app.schemas import NotificationSchema, OperationLogSchema
 from app import db
 
-bp = Blueprint('notifications', __name__, url_prefix='/notifications')
+bp_notifications = Blueprint('notifications', __name__, url_prefix='/notifications')
 
-@bp.route('', methods=['GET'])
+@bp_notifications.route('', methods=['GET'])
 @jwt_required()
 def list_notifications():
     uid = int(get_jwt_identity())
     notifs = Notification.query.filter((Notification.user_id == uid) | (Notification.user_id == None)).order_by(Notification.created_at.desc()).all()
     return jsonify(NotificationSchema(many=True).dump(notifs))
 
-@bp.route('/<int:notif_id>/read', methods=['POST'])
+@bp_notifications.route('/<int:notif_id>/read', methods=['POST'])
 @jwt_required()
 def mark_read(notif_id):
     uid = int(get_jwt_identity())
@@ -24,7 +24,7 @@ def mark_read(notif_id):
     db.session.commit()
     return jsonify({'msg': '已標記為已讀'})
 
-@bp.route('/logs', methods=['GET'])
+@bp_notifications.route('/logs', methods=['GET'])
 @jwt_required()
 def list_logs():
     # 僅 admin 可看全部，user 只能看自己

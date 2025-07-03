@@ -19,11 +19,13 @@ class BaseConfig:
     ECPAY_NOTIFY_URL        = os.getenv("ECPAY_NOTIFY_URL")
     # Auto-Return 中繼 URL：綠界將 POST 自動導回到這裡
     ECPAY_ORDER_RETURN_URL  = os.getenv("ECPAY_ORDER_RETURN_URL")
+    
+    # 例外訊息往外傳遞，方便除錯  
+    PROPAGATE_EXCEPTIONS = True  
+
     # 最後要把使用者 redirect 到前端的網址
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-
-    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000")
-    
+    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000")  
 
 class DevelopmentConfig(BaseConfig):
     """開發環境設定"""
