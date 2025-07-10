@@ -69,7 +69,7 @@ class OrderItem(db.Model):  # 商品明細資料表（子表）
     product_name = db.Column(db.String(120), nullable=False)  # 商品名稱
     qty = db.Column(db.Integer, nullable=False)  # 數量
     price = db.Column(db.Float, nullable=False)  # 價格（單價）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 建立時間
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # 建立時間
 
     def to_dict(self):  # 將明細資料轉成 dict，方便前端用
         return {
@@ -90,7 +90,7 @@ class OrderHistory(db.Model):  # 訂單歷史紀錄（例如狀態變更）
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)  # 外鍵：對應訂單
     status = db.Column(db.String(20), nullable=False)  # 訂單狀態（例如：pending、shipped、completed）
     operator = db.Column(db.String(64), nullable=False)  # 操作人（系統或後台人員）
-    operated_at = db.Column(db.DateTime, default=datetime.utcnow)  # 操作時間
+    operated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # 操作時間
     remark = db.Column(db.Text)  # 備註說明
 
     def to_dict(self):  # 轉為 dict 格式

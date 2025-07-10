@@ -44,3 +44,19 @@ class ProductionConfig(BaseConfig):
     """正式環境設定"""
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+
+class RenderConfig(BaseConfig):
+    """Render 平台部署設定"""
+    DEBUG = False
+    # Render 提供的 PostgreSQL 資料庫 URL
+    database_url = os.getenv("DATABASE_URL")
+    if database_url and database_url.startswith("postgres://"):
+        # 修正 Render 的 PostgreSQL URL 格式
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = database_url
+    
+    # Render 特殊設定
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
