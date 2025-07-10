@@ -1,8 +1,9 @@
+#app/routes/dashboard.py
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt
 from app.models import Order, User
 from app import db
-from sqlalchemy import func
+from sqlalchemy import func,extract
 
 bp_dashboard = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
@@ -17,8 +18,16 @@ def summary():
     total_sales = db.session.query(func.sum(Order.total_amount)).scalar() or 0
     order_count = db.session.query(func.count(Order.id)).scalar() or 0
     customer_count = db.session.query(func.count(User.id)).scalar() or 0
+    month_expr = func.date_trunc("month", Order.created_at)
+    monthly_sales_data = (
+        db.session.query(month_expr.label("month"), func.sum(Order.total_amount).label("value"))
+        .group_by(month_expr)
+        .order_by(month_expr)
+        .all()
+    )
     return jsonify({
         "total_sales": total_sales,
         "order_count": order_count,
-        "customer_count": customer_count
+        "customer_count": customer_count,
+        "monthly_sales": monthly_sales_data
     })

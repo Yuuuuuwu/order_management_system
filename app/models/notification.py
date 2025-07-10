@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime,timezone
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -9,7 +9,7 @@ class Notification(db.Model):
     title = db.Column(db.String(128), nullable=False)
     content = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
