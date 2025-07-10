@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy  # SQLAlchemy 資料庫 ORM
 from flask_migrate import Migrate  # 資料庫遷移工具
 from flask_jwt_extended import JWTManager  # JWT 驗證管理
 from flask_cors import CORS  # 處理跨域請求 (CORS)
-from config import DevelopmentConfig, TestingConfig, ProductionConfig  # 匯入自定義設定檔
+from config import DevelopmentConfig, TestingConfig, ProductionConfig, RenderConfig  # 匯入自定義設定檔
 import os  # 用來操作環境變數
 from dotenv import load_dotenv  # 讀取 .env 檔案中的環境變數
 
@@ -28,7 +28,8 @@ def create_app():
     cfg_cls = {  # 根據環境選擇對應設定檔
         "development": DevelopmentConfig,
         "testing": TestingConfig,
-        "production": ProductionConfig
+        "production": ProductionConfig,
+        "render": RenderConfig
     }[env]
     app.config.from_object(cfg_cls)  # 載入對應設定檔
 
