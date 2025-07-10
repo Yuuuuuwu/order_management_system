@@ -1,6 +1,6 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime,timezone
 
 class User(db.Model):
     """使用者資料表
@@ -15,9 +15,11 @@ class User(db.Model):
     role = db.Column(db.String(20), default="customer", nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     email_verified = db.Column(db.Boolean, default=False, nullable=False)  # 新增 Email 驗證狀態
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime)
+
+    orders = db.relationship('Order', back_populates='user', lazy='selectin', cascade="all, delete-orphan")
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
