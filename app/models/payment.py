@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Payment(db.Model):
     """付款資訊資料表"""
@@ -11,5 +11,5 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(40), nullable=False)
     transaction_id = db.Column(db.String(128))
     paid_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))

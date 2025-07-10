@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Category(db.Model):
     """商品分類（支援多層級）"""
@@ -9,8 +9,8 @@ class Category(db.Model):
     sku = db.Column(db.String(64), unique=True, nullable=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     parent = db.relationship('Category', remote_side=[id], backref='children')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self, include_children=False):
         data = {
@@ -37,8 +37,8 @@ class Product(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     category = db.relationship('Category', backref='products')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
