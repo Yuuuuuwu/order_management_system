@@ -23,7 +23,7 @@ Created: 2025-06-25
 
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from werkzeug.security import generate_password_hash
 import random
@@ -100,12 +100,12 @@ def create_default_users():
         # 建立新使用者
         user = User(
             email=user_data['email'],
-            username=user_data['name'],
+            username=user_data['name'],  # 正確使用 username 欄位
             role=user_data['role'],
             phone=user_data.get('phone'),
             is_active=user_data.get('is_active', True)
         )
-        user.set_password(user_data['password'])
+        user.password_hash = generate_password_hash(user_data['password'])
         
         db.session.add(user)
         created_users.append(user)
@@ -166,17 +166,15 @@ def create_products(categories):
         {
             'name': 'iPhone 15 Pro',
             'description': '6.1吋 Super Retina XDR 顯示器，A17 Pro 晶片，三鏡頭相機系統',
-            'sku': 'IPH15PRO001',
             'price': Decimal('35900.00'),
-            'stock_quantity': 50,
+            'stock': 50,
             'category_name': '手機'
         },
         {
             'name': 'Samsung Galaxy S24 Ultra',
             'description': '6.8吋 Dynamic AMOLED 2X 顯示器，Snapdragon 8 Gen 3，S Pen 支援',
-            'sku': 'SAM-S24U-001',
             'price': Decimal('42900.00'),
-            'stock_quantity': 30,
+            'stock': 30,
             'category_name': '手機'
         },
         
@@ -184,17 +182,15 @@ def create_products(categories):
         {
             'name': 'MacBook Pro 14吋',
             'description': 'M3 晶片，16GB 記憶體，512GB SSD，14.2吋 Liquid Retina XDR 顯示器',
-            'sku': 'MBP14-M3-512',
             'price': Decimal('72900.00'),
-            'stock_quantity': 25,
+            'stock': 25,
             'category_name': '筆電'
         },
         {
             'name': 'Dell XPS 13',
             'description': 'Intel Core i7，16GB RAM，512GB SSD，13.4吋 InfinityEdge 顯示器',
-            'sku': 'DELL-XPS13-I7',
             'price': Decimal('45900.00'),
-            'stock_quantity': 20,
+            'stock': 20,
             'category_name': '筆電'
         },
         
@@ -202,9 +198,8 @@ def create_products(categories):
         {
             'name': 'iPad Air',
             'description': '10.9吋 Liquid Retina 顯示器，M1 晶片，256GB，支援 Apple Pencil',
-            'sku': 'IPAD-AIR-256',
             'price': Decimal('19900.00'),
-            'stock_quantity': 40,
+            'stock': 40,
             'category_name': '平板'
         },
         
@@ -212,17 +207,15 @@ def create_products(categories):
         {
             'name': 'AirPods Pro (第 2 代)',
             'description': '主動式降噪，空間音訊，MagSafe 充電盒，最長 6 小時聆聽時間',
-            'sku': 'APP-PRO2-001',
             'price': Decimal('7490.00'),
-            'stock_quantity': 100,
+            'stock': 100,
             'category_name': '耳機'
         },
         {
             'name': 'Sony WH-1000XM5',
             'description': '業界領先的降噪技術，30小時電池續航，快速充電',
-            'sku': 'SONY-WH1000XM5',
             'price': Decimal('11900.00'),
-            'stock_quantity': 35,
+            'stock': 35,
             'category_name': '耳機'
         },
         
@@ -230,9 +223,8 @@ def create_products(categories):
         {
             'name': 'Apple Watch Series 9',
             'description': '45mm GPS，鋁金屬錶殼，運動型錶帶，健康監測功能',
-            'sku': 'AW-S9-45-GPS',
             'price': Decimal('12900.00'),
-            'stock_quantity': 60,
+            'stock': 60,
             'category_name': '穿戴裝置'
         },
         
@@ -240,17 +232,15 @@ def create_products(categories):
         {
             'name': 'Magic Keyboard',
             'description': '無線鍵盤，背光按鍵，內建充電電池，支援 Touch ID',
-            'sku': 'MK-TOUCH-001',
             'price': Decimal('4390.00'),
-            'stock_quantity': 75,
+            'stock': 75,
             'category_name': '電腦週邊'
         },
         {
             'name': 'Logitech MX Master 3S',
             'description': '無線滑鼠，MagSpeed 滾輪，多裝置連接，70天電池續航',
-            'sku': 'LOG-MXM3S-001',
             'price': Decimal('3290.00'),
-            'stock_quantity': 45,
+            'stock': 45,
             'category_name': '電腦週邊'
         }
     ]
@@ -278,8 +268,8 @@ def create_products(categories):
         product = Product(
             name=prod_data['name'],
             desc=prod_data['description'],
-            price=prod_data['price'],
-            stock=prod_data['stock_quantity'],
+            price=float(prod_data['price']),  # 轉為 float
+            stock=prod_data['stock'],
             category_id=category.id,
             is_active=True
         )
@@ -408,7 +398,7 @@ def create_orders(customers, products, users):
             })
         
         # 建立訂單
-        order_date = datetime.utcnow() - timedelta(days=random.randint(1, 90))
+        order_date = datetime.now(timezone.utc) - timedelta(days=random.randint(1, 90))
         order_sn = f"ORD{order_date.strftime('%Y%m%d')}{str(i+1).zfill(3)}"
         
         order = Order(
@@ -439,7 +429,8 @@ def create_orders(customers, products, users):
         
         # 建立支付記錄（某些訂單）
         if order.status in ['confirmed', 'shipped', 'delivered'] or random.choice([True, False]):
-            payment_status = 'success' if order.status in ['confirmed', 'shipped', 'delivered'] else random.choice(['pending', 'failed', 'completed'])
+            # Payment model 的狀態值: initiated, pending, success, failed
+            payment_status = 'success' if order.status in ['confirmed', 'shipped', 'delivered'] else random.choice(['pending', 'failed', 'initiated'])
             
             payment = Payment(
                 order_id=order.id,
@@ -448,6 +439,11 @@ def create_orders(customers, products, users):
                 status=payment_status,
                 transaction_id=f"TXN{order_date.strftime('%Y%m%d')}{random.randint(100000, 999999)}"
             )
+            
+            # 如果是成功的支付，設定付款時間
+            if payment_status == 'success':
+                payment.paid_at = order_date + timedelta(minutes=random.randint(1, 60))
+            
             db.session.add(payment)
         
         created_orders.append(order)
@@ -499,7 +495,7 @@ def create_notifications(users, orders):
                 title=title,
                 content=content,
                 is_read=random.choice([True, False]),
-                created_at=datetime.utcnow() - timedelta(days=random.randint(1, 30))
+                created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(1, 30))
             )
             
             db.session.add(notification)
