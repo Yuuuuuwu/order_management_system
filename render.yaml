@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: oms-backend
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "./start.sh"
+    plan: free
+    environmentVariables:
+      - key: FLASK_ENV
+        value: render
+      - key: FLASK_APP
+        value: run.py
+      - key: PYTHON_VERSION
+        value: 3.11.4
+    autoDeploy: true
