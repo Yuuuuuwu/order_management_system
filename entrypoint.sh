@@ -11,5 +11,10 @@ echo "✅ Database is up, running migrations"
 # 1. 自動套用所有還沒跑過的 migration
 flask db upgrade
 
-# 2. 啟動 Flask（生產建議 gunicorn）
+echo "🌱 Loading seed data..."
+# 2. 載入預設資料
+python scripts/seed_data.py
+
+echo "🚀 Starting Flask application"
+# 3. 啟動 Flask（生產建議 gunicorn）
 exec gunicorn --bind 0.0.0.0:5000 "app:create_app()"

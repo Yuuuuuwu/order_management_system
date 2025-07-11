@@ -10,8 +10,6 @@ __pycache__/
 
 # 虛擬環境、環境設定
 venv/
-.env
-.env.*
 instance/            # Flask 的 instance 資料夾（常存私密設定）
   
 # 測試、型別檢查快取
