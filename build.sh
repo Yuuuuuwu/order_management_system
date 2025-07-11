@@ -15,7 +15,8 @@ flask db upgrade
 
 # Create initial data (if needed)
 if [ "$FLASK_ENV" = "render" ]; then
-    echo "Skipping seed data in Render production"
+    echo "Loading seed data for Render production"
+    python scripts/seed_data.py
 else
     python scripts/seed_data.py
 fi
