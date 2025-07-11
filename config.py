@@ -48,15 +48,23 @@ class ProductionConfig(BaseConfig):
 class RenderConfig(BaseConfig):
     """Render 平台部署設定"""
     DEBUG = False
+    
     # Render 提供的 PostgreSQL 資料庫 URL
     database_url = os.getenv("DATABASE_URL")
-    if database_url and database_url.startswith("postgres://"):
-        # 修正 Render 的 PostgreSQL URL 格式
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-    SQLALCHEMY_DATABASE_URI = database_url
+    if database_url:
+        # 修正 Render 的 PostgreSQL URL 格式（如果需要）
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        SQLALCHEMY_DATABASE_URI = database_url
+    else:
+        # 如果 DATABASE_URL 不存在，使用預設的 PostgreSQL 連接
+        SQLALCHEMY_DATABASE_URI = "postgresql://user:password@localhost:5432/dbname"
     
     # Render 特殊設定
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
+        'pool_timeout': 20,
+        'pool_size': 10,
+        'max_overflow': 20,
     }

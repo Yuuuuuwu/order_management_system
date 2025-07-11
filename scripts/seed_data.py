@@ -29,6 +29,12 @@ from werkzeug.security import generate_password_hash
 import random
 from faker import Faker
 
+# 確保環境變數正確設定（for Render 部署）
+if not os.getenv('FLASK_ENV'):
+    os.environ['FLASK_ENV'] = 'render'
+if not os.getenv('FLASK_APP'):
+    os.environ['FLASK_APP'] = 'run.py'
+
 # 添加專案根目錄到 Python 路徑
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

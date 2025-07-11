@@ -1,13 +1,12 @@
+import os
 from app import create_app
 
 app = create_app()
 
 if __name__ == '__main__':
-    # 啟動開發伺服器，預設監聽 127.0.0.1:5000
-    app.run(debug=True)
-
-
-#惠中0512
-#遷移資料庫 migration資料夾出現，資料庫的 Git 倉庫
-#export FLASK_APP=run.py
-#export FLASK_APP="app:create_app"
+    # 本地開發時啟動開發伺服器
+    port = int(os.environ.get('PORT', 5000))
+    host = os.environ.get('HOST', '127.0.0.1')
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
+    app.run(host=host, port=port, debug=debug)
