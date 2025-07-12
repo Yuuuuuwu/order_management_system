@@ -57,8 +57,8 @@ class RenderConfig(BaseConfig):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         SQLALCHEMY_DATABASE_URI = database_url
     else:
-        # 如果 DATABASE_URL 不存在，使用預設的 PostgreSQL 連接
-        SQLALCHEMY_DATABASE_URI = "postgresql://user:password@localhost:5432/dbname"
+        # 如果 DATABASE_URL 不存在，拋出錯誤
+        raise ValueError("DATABASE_URL environment variable is required for Render deployment")
     
     # Render 特殊設定
     SQLALCHEMY_ENGINE_OPTIONS = {
