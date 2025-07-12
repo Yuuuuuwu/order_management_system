@@ -29,7 +29,7 @@ EXPOSE $PORT
 # 啟動腳本：顯示環境資訊，執行遷移，載入資料，啟動應用
 CMD echo "🔍 Environment Check:" && \
     echo "   FLASK_ENV: $FLASK_ENV" && \
-    echo "   DATABASE_URL: ${DATABASE_URL:0:50}..." && \
+    echo "   DATABASE_URL: [CONFIGURED]" && \
     echo "🗄️ Running database migrations..." && \
     FLASK_ENV=render flask db upgrade && \
     echo "🌱 Loading seed data..." && \
