@@ -11,7 +11,11 @@ bp_notifications = Blueprint('notifications', __name__, url_prefix='/notificatio
 def list_notifications():
     uid = int(get_jwt_identity())
     notifs = Notification.query.filter((Notification.user_id == uid) | (Notification.user_id == None)).order_by(Notification.created_at.desc()).all()
-    return jsonify(NotificationSchema(many=True).dump(notifs))
+    # 前端期望 {data: [...]} 格式
+    return jsonify({
+        'data': NotificationSchema(many=True).dump(notifs),
+        'total': len(notifs)
+    })
 
 @bp_notifications.route('/<int:notif_id>/read', methods=['POST'])
 @jwt_required()

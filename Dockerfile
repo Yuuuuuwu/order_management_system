@@ -16,9 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 複製依賴檔案並安裝 Python 套件
-COPY requirements-render.txt .
+COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements-render.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # 複製應用程式碼
 COPY . .

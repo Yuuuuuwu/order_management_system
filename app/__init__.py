@@ -37,8 +37,11 @@ def create_app():
     Migrate(app, db)  # 綁定資料庫遷移工具
     JWTManager(app)  # 啟用 JWT 管理
 
-    # 設定 CORS，允許前端網址從 config 讀取
-    CORS(app, resources={r"/*": {"origins": app.config["FRONTEND_URL"]}}, supports_credentials=True)
+    # 設定 CORS，開發環境允許所有來源
+    if env == "development":
+        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    else:
+        CORS(app, resources={r"/*": {"origins": app.config["FRONTEND_URL"]}}, supports_credentials=True)
 
     app.url_map.strict_slashes = False  # 關閉嚴格尾斜線檢查，避免 /api 和 /api/ 被視為不同路徑
 

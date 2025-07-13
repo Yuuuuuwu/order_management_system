@@ -549,9 +549,9 @@ def main():
         print("  客戶: customer@example.com / CustomerPassword123!")
         
         print("\n🌐 存取網址：")
-        print("  前端: http://localhost:5173")
-        print("  後端 API: http://localhost:5000")
-        print("  API 文件: http://localhost:5000/api/v1/docs/")
+        print("  前端: http://localhost:3000")
+        print("  後端 API: http://localhost:5001")
+        print("  API 文件: http://localhost:5001/api/v1/docs/")
         
     except Exception as e:
         print(f"\n❌ 載入預設資料時發生錯誤: {str(e)}")
