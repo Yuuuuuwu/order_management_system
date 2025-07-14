@@ -56,18 +56,33 @@ def summary():
             "value": float(row.value) if row.value else 0
         })
     
-    # 新增2025年1-6月假數據
+    # 新增2025年1-6月假數據，確保按順序排列
     fake_data = [
-        {"month": "2025年1月", "value": 25000.0},
-        {"month": "2025年2月", "value": 32000.0},
-        {"month": "2025年3月", "value": 28500.0},
-        {"month": "2025年4月", "value": 35000.0},
-        {"month": "2025年5月", "value": 42000.0},
-        {"month": "2025年6月", "value": 38000.0}
+        {"month": "2025年1月", "value": 25000.0, "sort_key": "2025-01"},
+        {"month": "2025年2月", "value": 32000.0, "sort_key": "2025-02"},
+        {"month": "2025年3月", "value": 28500.0, "sort_key": "2025-03"},
+        {"month": "2025年4月", "value": 35000.0, "sort_key": "2025-04"},
+        {"month": "2025年5月", "value": 42000.0, "sort_key": "2025-05"},
+        {"month": "2025年6月", "value": 38000.0, "sort_key": "2025-06"}
     ]
     
-    # 合併真實數據和假數據
-    monthly_sales.extend(fake_data)
+    # 為真實數據添加排序鍵
+    for item in monthly_sales:
+        month_display = item["month"]
+        if "年" in month_display and "月" in month_display:
+            # 從 "2024年12月" 格式提取年月
+            year = month_display.split("年")[0]
+            month = month_display.split("年")[1].replace("月", "")
+            item["sort_key"] = f"{year}-{month.zfill(2)}"
+        else:
+            item["sort_key"] = "0000-00"  # 備用排序
+    
+    # 合併並按時間順序排序
+    all_monthly_data = monthly_sales + fake_data
+    all_monthly_data.sort(key=lambda x: x["sort_key"])
+    
+    # 移除排序鍵，只保留month和value
+    monthly_sales = [{"month": item["month"], "value": item["value"]} for item in all_monthly_data]
     
     return jsonify({
         "total_sales": float(total_sales),
