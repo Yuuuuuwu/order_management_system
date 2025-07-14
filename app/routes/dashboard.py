@@ -56,6 +56,19 @@ def summary():
             "value": float(row.value) if row.value else 0
         })
     
+    # 新增2025年1-6月假數據
+    fake_data = [
+        {"month": "2025年1月", "value": 25000.0},
+        {"month": "2025年2月", "value": 32000.0},
+        {"month": "2025年3月", "value": 28500.0},
+        {"month": "2025年4月", "value": 35000.0},
+        {"month": "2025年5月", "value": 42000.0},
+        {"month": "2025年6月", "value": 38000.0}
+    ]
+    
+    # 合併真實數據和假數據
+    monthly_sales.extend(fake_data)
+    
     return jsonify({
         "total_sales": float(total_sales),
         "order_count": int(order_count),
