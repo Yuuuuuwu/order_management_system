@@ -43,8 +43,16 @@ def summary():
     # 序列化月度資料
     monthly_sales = []
     for row in monthly_sales_raw:
+        # 格式化月份顯示，例如 "2024-01" -> "2024年1月"
+        month_str = str(row.month)
+        if len(month_str) >= 7:  # YYYY-MM 格式
+            year, month = month_str[:7].split('-')
+            formatted_month = f"{year}年{int(month)}月"
+        else:
+            formatted_month = month_str
+            
         monthly_sales.append({
-            "month": str(row.month),
+            "month": formatted_month,
             "value": float(row.value) if row.value else 0
         })
     
