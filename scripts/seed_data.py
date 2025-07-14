@@ -378,84 +378,102 @@ def create_orders(customers, products, users):
     order_statuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
     payment_methods = ['credit_card', 'bank_transfer', 'cash_on_delivery']
     
-    # 建立最近 3 個月的訂單
-    for i in range(25):
-        # 隨機選擇客戶
-        customer = random.choice(customers)
+    # 建立 2025年1-7月的訂單 (每月3-5筆)
+    base_date = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    
+    for month in range(1, 8):  # 2025年1月到7月
+        # 每月生成 3-5 筆訂單
+        monthly_orders = random.randint(3, 5)
         
-        # 隨機選擇 1-4 個商品
-        order_products = random.sample(products, random.randint(1, 4))
-        
-        # 計算訂單總金額
-        total_amount = Decimal('0.00')
-        order_items = []
-        
-        for product in order_products:
-            quantity = random.randint(1, 3)
-            price = Decimal(str(product.price))
-            subtotal = price * quantity
-            total_amount += subtotal
+        for order_num in range(monthly_orders):
+            # 隨機選擇客戶
+            customer = random.choice(customers)
             
-            order_items.append({
-                'product': product,
-                'quantity': quantity,
-                'price': price,
-                'subtotal': subtotal
-            })
-        
-        # 建立訂單
-        order_date = datetime.now(timezone.utc) - timedelta(days=random.randint(1, 90))
-        order_sn = f"ORD{order_date.strftime('%Y%m%d')}{str(i+1).zfill(3)}"
-        
-        order = Order(
-            order_sn=order_sn,
-            user_id=customer_user.id,
-            customer_id=customer.id,
-            status=random.choice(order_statuses),
-            total_amount=float(total_amount),
-            shipping_address=customer.address or fake.address(),
-            receiver_name=customer.name,
-            receiver_phone=customer.phone or fake.phone_number(),
-            remark=fake.text(max_nb_chars=100) if random.choice([True, False]) else None
-        )
-        
-        db.session.add(order)
-        db.session.flush()  # 取得 order.id
-        
-        # 建立訂單項目
-        for item_data in order_items:
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=item_data['product'].id,
-                product_name=item_data['product'].name,
-                qty=item_data['quantity'],
-                price=float(item_data['price'])
-            )
-            db.session.add(order_item)
-        
-        # 建立支付記錄（某些訂單）
-        if order.status in ['confirmed', 'shipped', 'delivered'] or random.choice([True, False]):
-            # Payment model 的狀態值: initiated, pending, success, failed
-            payment_status = 'success' if order.status in ['confirmed', 'shipped', 'delivered'] else random.choice(['pending', 'failed', 'initiated'])
+            # 隨機選擇 1-4 個商品
+            order_products = random.sample(products, random.randint(1, 4))
             
-            payment = Payment(
-                order_id=order.id,
-                payment_method=random.choice(payment_methods),
-                amount=float(total_amount),
-                status=payment_status,
-                transaction_id=f"TXN{order_date.strftime('%Y%m%d')}{random.randint(100000, 999999)}"
+            # 計算訂單總金額
+            total_amount = Decimal('0.00')
+            order_items = []
+            
+            for product in order_products:
+                quantity = random.randint(1, 3)
+                price = Decimal(str(product.price))
+                subtotal = price * quantity
+                total_amount += subtotal
+                
+                order_items.append({
+                    'product': product,
+                    'quantity': quantity,
+                    'price': price,
+                    'subtotal': subtotal
+                })
+            
+            # 生成該月份內的隨機日期
+            if month == 2:
+                max_day = 28  # 2月
+            elif month in [4, 6, 9, 11]:
+                max_day = 30  # 4,6,9,11月
+            else:
+                max_day = 31  # 其他月份
+            
+            random_day = random.randint(1, max_day)
+            random_hour = random.randint(0, 23)
+            random_minute = random.randint(0, 59)
+            
+            order_date = datetime(2025, month, random_day, random_hour, random_minute, tzinfo=timezone.utc)
+            order_sn = f"ORD{order_date.strftime('%Y%m%d')}{str(len(created_orders)+1).zfill(3)}"
+            
+            order = Order(
+                order_sn=order_sn,
+                user_id=customer_user.id,
+                customer_id=customer.id,
+                status=random.choice(order_statuses),
+                total_amount=float(total_amount),
+                shipping_address=customer.address or fake.address(),
+                receiver_name=customer.name,
+                receiver_phone=customer.phone or fake.phone_number(),
+                remark=fake.text(max_nb_chars=100) if random.choice([True, False]) else None,
+                created_at=order_date  # 設定創建時間
             )
             
-            # 如果是成功的支付，設定付款時間
-            if payment_status == 'success':
-                payment.paid_at = order_date + timedelta(minutes=random.randint(1, 60))
+            db.session.add(order)
+            db.session.flush()  # 取得 order.id
             
-            db.session.add(payment)
+            # 建立訂單項目
+            for item_data in order_items:
+                order_item = OrderItem(
+                    order_id=order.id,
+                    product_id=item_data['product'].id,
+                    product_name=item_data['product'].name,
+                    qty=item_data['quantity'],
+                    price=float(item_data['price'])
+                )
+                db.session.add(order_item)
+            
+            # 建立支付記錄（某些訂單）
+            if order.status in ['confirmed', 'shipped', 'delivered'] or random.choice([True, False]):
+                # Payment model 的狀態值: initiated, pending, success, failed
+                payment_status = 'success' if order.status in ['confirmed', 'shipped', 'delivered'] else random.choice(['pending', 'failed', 'initiated'])
+                
+                payment = Payment(
+                    order_id=order.id,
+                    payment_method=random.choice(payment_methods),
+                    amount=float(total_amount),
+                    status=payment_status,
+                    transaction_id=f"TXN{order_date.strftime('%Y%m%d')}{random.randint(100000, 999999)}"
+                )
+                
+                # 如果是成功的支付，設定付款時間
+                if payment_status == 'success':
+                    payment.paid_at = order_date + timedelta(minutes=random.randint(1, 60))
+                
+                db.session.add(payment)
+            
+            created_orders.append(order)
         
-        created_orders.append(order)
-        
-        if (i + 1) % 5 == 0:
-            print(f"  ✅ 已建立 {i + 1} 個訂單")
+        # 每月完成後顯示進度
+        print(f"  ✅ 已建立 2025年{month}月 {monthly_orders} 個訂單")
     
     db.session.commit()
     print(f"✅ 完成建立 {len(created_orders)} 個訂單")
