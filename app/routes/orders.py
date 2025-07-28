@@ -120,7 +120,7 @@ def create_order():
     data = request.get_json() or {}
     user_id = int(get_jwt_identity())
     # 自動產生訂單編號
-    order_sn = f"OMS{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(100,999)}"
+    order_sn = f'OMS{order.id}{int(datetime.now().timestamp())}'
     receiver_name = data.get('receiver_name')
     receiver_phone = data.get('receiver_phone')
     shipping_address = data.get('shipping_address')

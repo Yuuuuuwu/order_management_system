@@ -102,11 +102,10 @@ def ecpay_pay_order(order_id):
     base_url    = 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'
     notify_url  = current_app.config.get('ECPAY_NOTIFY_URL')
     return_url  = current_app.config.get('ECPAY_RETURN_URL')
-    trade_no    = f'OMS{order.id}{int(datetime.now().timestamp())}'
 
     raw_params = {
         'MerchantID':        merchant_id,
-        'MerchantTradeNo':   trade_no,
+        'MerchantTradeNo':   Order.query.get(order_id).order_sn,
         'MerchantTradeDate': datetime.now().strftime('%Y/%m/%d %H:%M:%S'),
         'PaymentType':       'aio',
         'TotalAmount':       int(order.total_amount),
