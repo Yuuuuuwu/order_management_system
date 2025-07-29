@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request, abort, current_app
 from app import db
 from app.models import Order, OrderItem, OrderHistory, Product
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
@@ -219,13 +219,66 @@ def update_order(order_id):
 @bp_orders.route('/<int:order_id>', methods=['DELETE'])
 @jwt_required()
 def delete_order(order_id):
-    claims = get_jwt()
-    uid = int(get_jwt_identity())
-    o = Order.query.get_or_404(order_id)
-    if claims.get("role") != "admin" and o.user_id != uid:
-        abort(404, description="找不到或無權限刪除此訂單")
-    # 在刪除訂單時記錄操作日誌
-    log_operation(uid, claims.get('username', str(uid)), 'delete', 'order', order_id, f"刪除訂單 {order_id}")
-    db.session.delete(o)
-    db.session.commit()
-    return jsonify({"message": "訂單刪除成功"}), 200
+    """
+    刪除訂單 (加強錯誤處理版本)
+    """
+    try:
+        claims = get_jwt()
+        uid = int(get_jwt_identity())
+        
+        # 查詢訂單
+        order = Order.query.get_or_404(order_id)
+        
+        # 權限檢查
+        if claims.get("role") != "admin" and order.user_id != uid:
+            abort(403, description="無權限刪除此訂單")
+        
+        # 檢查訂單狀態
+        if order.status == 'paid':
+            abort(400, description="已付款的訂單無法刪除")
+        
+        current_app.logger.info(f"開始刪除訂單 {order_id}")
+        
+        # 手動刪除關聯資料（如果 cascade 設定有問題）
+        try:
+            # 刪除訂單項目
+            OrderItem.query.filter_by(order_id=order_id).delete()
+            current_app.logger.info(f"已刪除訂單 {order_id} 的訂單項目")
+            
+            # 刪除訂單歷史
+            from app.models.order import OrderHistory
+            OrderHistory.query.filter_by(order_id=order_id).delete()
+            current_app.logger.info(f"已刪除訂單 {order_id} 的歷史記錄")
+            
+        except Exception as e:
+            current_app.logger.error(f"刪除關聯資料時發生錯誤: {str(e)}")
+        
+        # 恢復庫存（如果訂單已扣庫存）
+        if order.status == 'pending':
+            try:
+                for item in order.items:
+                    product = Product.query.get(item.product_id)
+                    if product:
+                        product.change_stock(item.qty)  # 恢復庫存
+                        current_app.logger.info(f"恢復商品 {product.id} 庫存 {item.qty}")
+            except Exception as e:
+                current_app.logger.error(f"恢復庫存時發生錯誤: {str(e)}")
+        
+        # 記錄操作日誌（放在最後，避免阻擋主要操作）
+        try:
+            username = claims.get('username') or f"user_{uid}"
+            log_operation(uid, username, 'delete', 'order', order_id, f"刪除訂單 {order_id}")
+        except Exception as e:
+            current_app.logger.error(f"記錄操作日誌失敗: {str(e)}")
+        
+        # 刪除主訂單
+        db.session.delete(order)
+        db.session.commit()
+        
+        current_app.logger.info(f"訂單 {order_id} 刪除成功")
+        return jsonify({"message": "訂單刪除成功"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"刪除訂單 {order_id} 失敗: {str(e)}")
+        return jsonify({"error": f"刪除訂單失敗: {str(e)}"}), 500

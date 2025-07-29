@@ -64,6 +64,7 @@ def pay_order(order_id):
         paid_at=datetime.now()
     )
     order.status = 'paid'
+    order.payment_status = 'paid'
     db.session.add(payment)
     db.session.commit()
 
@@ -103,7 +104,7 @@ def ecpay_pay_order(order_id):
     notify_url  = current_app.config.get('ECPAY_NOTIFY_URL')
     return_url  = current_app.config.get('ECPAY_RETURN_URL')
     # 不管先前有沒有 trade_no，只要還沒支付成功，就重產生
-    if order.payment_status != 'SUCCESS':
+    if order.payment_status != 'paid':
       new_trade = f"OMS{order.id}{int(datetime.now().timestamp())}"
       order.trade_no = new_trade[:20]     # 確保 ≤20 碼
       db.session.commit()
@@ -163,7 +164,7 @@ def ecpay_return():
     # 假設你的 order_sn 就存於 Order model
     # 於回調裡可以依 trade_no 解析訂單 id 或查資料庫拿 order_sn
     order = Order.query.filter_by(trade_no=trade_no).first()
-    order_sn = trade_no if order else ''
+    order_sn = order.order_sn if order else ''
 
     # 組成前端要的 URL (使用你的前端網域與路由)
     client_url = current_app.config.get('FRONTEND_URL')
@@ -239,6 +240,14 @@ def ecpay_callback():
 
             db.session.commit()
             current_app.logger.info("訂單更新成功")
+
+            # 發送付款成功通知
+            create_notification(
+                user_id=order.user_id,
+                type='payment_success',
+                title='付款成功',
+                content=f'您的訂單 {order.order_sn} 已完成付款。'
+            )
 
             return '1|OK'
         else:
