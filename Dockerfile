@@ -26,13 +26,12 @@ COPY . .
 # 暴露端口
 EXPOSE $PORT
 
-# 啟動腳本：顯示環境資訊，執行遷移，載入資料，啟動應用
+# 啟動腳本：顯示環境資訊，執行遷移，條件式載入資料，啟動應用
 CMD echo "🔍 Environment Check:" && \
     echo "   FLASK_ENV: $FLASK_ENV" && \
+    echo "   LOAD_SEED_DATA: ${LOAD_SEED_DATA:-false}" && \
     echo "   DATABASE_URL: [CONFIGURED]" && \
-    echo "🗄️ Running database migrations..." && \
-    FLASK_ENV=render flask db upgrade && \
-    echo "🌱 Loading seed data..." && \
-    FLASK_ENV=render python scripts/seed_data.py; \
+    echo "🗄️ Initializing database..." && \
+    FLASK_ENV=render python scripts/init_db.py && \
     echo "🚀 Starting Gunicorn server..." && \
     gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 run:app
