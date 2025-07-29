@@ -99,10 +99,12 @@ def login():
     if not user or not check_password_hash(user.password_hash, data.get('password', '')):
         abort(401, description="帳號或密碼錯誤")
 
+
     # 新增：登入成功時更新 last_login
     #from datetime import datetime
     #user.last_login = datetime.now()
     #db.session.commit()
+
 
     token = create_access_token(
         identity=str(user.id),

@@ -179,25 +179,44 @@ def ecpay_return():
 @bp_payments.route('/ecpay/callback', methods=['POST'])
 def ecpay_callback():
     """
-    綠界付款結果通知 (模擬)
+    綠界付款結果通知 (加強除錯版本)
     """
-    data = request.form.to_dict()
-    trade_no = data.get('MerchantTradeNo')
-    rtn_code = data.get('RtnCode')
-    check_mac_value = data.get('CheckMacValue')
+    try:
+        data = request.form.to_dict()
+        trade_no = data.get('MerchantTradeNo')
+        rtn_code = data.get('RtnCode')
+        check_mac_value = data.get('CheckMacValue')
 
-    current_app.logger.info(f"接收到的回調資料: {data}")
-    current_app.logger.info(f"驗證結果: {verify_check_mac_value(data)}")
+        # 詳細日誌
+        current_app.logger.info(f"=== 綠界回調開始 ===")
+        current_app.logger.info(f"接收到的回調資料: {data}")
+        current_app.logger.info(f"trade_no: {trade_no}")
+        current_app.logger.info(f"rtn_code: {rtn_code}")
 
-    if rtn_code == '1':
-        current_app.logger.info(f"交易成功，訂單編號: {trade_no}")
-        order = Order.query.filter_by(order_sn=trade_no).first()
-        if not order:
-            current_app.logger.error(f"找不到訂單: {trade_no}")
-            return 'fail' 
-        if order:
+        # MAC 值驗證
+        mac_valid = verify_check_mac_value(data)
+        current_app.logger.info(f"MAC 驗證結果: {mac_valid}")
+
+        # 暫時跳過 MAC 驗證來測試
+        # if not mac_valid:
+        #     current_app.logger.error("MAC 驗證失敗")
+        #     return '0|MAC驗證失敗'
+
+        if rtn_code == '1':
+            current_app.logger.info(f"交易成功，查詢訂單...")
+
+            # 查詢訂單
+            order = Order.query.filter_by(trade_no=trade_no).first()
+            current_app.logger.info(f"查詢結果: {order.id if order else 'None'}")
+
+            if not order:
+                current_app.logger.error(f"找不到訂單: {trade_no}")
+                return '0|找不到訂單'
+
+            # 更新訂單
             order.status = 'paid'
             order.payment_status = 'paid'
+
             payment = Payment(
                 order_id=order.id,
                 amount=order.total_amount,
@@ -207,21 +226,28 @@ def ecpay_callback():
                 paid_at=datetime.now()
             )
             db.session.add(payment)
-            # 新增：寫入訂單歷程
-            from app.models.order import OrderHistory
-            db.session.add(OrderHistory(order_id=order.id, status='paid', operator=str(order.user_id), operated_at=datetime.now(), remark='付款完成'))
-            db.session.commit()
-            current_app.logger.info("訂單狀態更新成功")
 
-            create_notification(
-                user_id=order.user_id,
-                type='payment_success',
-                title='付款成功',
-                content=f'您的訂單 {order.order_sn} 已完成付款。'
-            )
+            # 訂單歷史
+            from app.models.order import OrderHistory
+            db.session.add(OrderHistory(
+                order_id=order.id,
+                status='paid',
+                operator=str(order.user_id),
+                operated_at=datetime.now(),
+                remark='綠界付款完成'
+            ))
+
+            db.session.commit()
+            current_app.logger.info("訂單更新成功")
 
             return '1|OK'
-    return '0|FAIL'
+        else:
+            current_app.logger.error(f"交易失敗: rtn_code={rtn_code}")
+            return f'0|交易失敗:{rtn_code}'
+
+    except Exception as e:
+        current_app.logger.error(f"回調處理異常: {str(e)}")
+        return f'0|系統異常:{str(e)}'
 
 @bp_payments.route('', methods=['GET'])
 @jwt_required()
