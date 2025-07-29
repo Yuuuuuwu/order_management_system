@@ -63,6 +63,7 @@ jobs:
     - name: Run tests
       run: |
 
+
         pytest -v --cov=app --cov-report=xml --cov-report=html
       env:
         FLASK_APP: run.py
