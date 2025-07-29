@@ -157,9 +157,8 @@ def ecpay_return():
 
     # 假設你的 order_sn 就存於 Order model
     # 於回調裡可以依 trade_no 解析訂單 id 或查資料庫拿 order_sn
-    order_id = int(trade_no.replace('OMS', '')[:-10])
-    order = Order.query.get(order_id)
-    order_sn = order.order_sn if order else ''
+    order = Order.query.filter_by(order_sn=trade_no).first()
+    order_sn = trade_no if order else ''
 
     # 組成前端要的 URL (使用你的前端網域與路由)
     client_url = current_app.config.get('FRONTEND_URL')
@@ -187,12 +186,10 @@ def ecpay_callback():
 
     if rtn_code == '1':
         current_app.logger.info(f"交易成功，訂單編號: {trade_no}")
-        try:
-            order_id = int(trade_no.replace('OMS', '')[:-10])
-        except Exception as e:
-            current_app.logger.error(f"解析訂單編號失敗: {e}")
-            return 'fail'
-        order = Order.query.get(order_id)
+        order = Order.query.filter_by(order_sn=trade_no).first()
+        if not order:
+            current_app.logger.error(f"找不到訂單: {trade_no}")
+            return 'fail' 
         if order:
             order.status = 'paid'
             payment = Payment(
