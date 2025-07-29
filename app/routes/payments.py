@@ -102,7 +102,12 @@ def ecpay_pay_order(order_id):
     base_url    = 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'
     notify_url  = current_app.config.get('ECPAY_NOTIFY_URL')
     return_url  = current_app.config.get('ECPAY_RETURN_URL')
-    trade_no    = Order.query.get(order_id).order_sn
+    # 不管先前有沒有 trade_no，只要還沒支付成功，就重產生
+    if order.payment_status != 'SUCCESS':
+      new_trade = f"OMS{order.id}{int(datetime.now().timestamp())}"
+      order.trade_no = new_trade[:20]     # 確保 ≤20 碼
+      db.session.commit()
+    trade_no    = order.trade_no
 
     raw_params = {
         'MerchantID':        merchant_id,
