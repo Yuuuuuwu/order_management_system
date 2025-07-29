@@ -197,6 +197,7 @@ def ecpay_callback():
             return 'fail' 
         if order:
             order.status = 'paid'
+            order.payment_status = 'paid'
             payment = Payment(
                 order_id=order.id,
                 amount=order.total_amount,

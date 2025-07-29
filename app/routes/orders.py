@@ -103,6 +103,14 @@ def batch_update_status():
             continue
         if claims.get('role') != 'admin' and order.user_id != uid:
             continue
+        
+        # 如果是取消訂單，恢復庫存
+        if status == 'cancelled' and order.status != 'cancelled':
+            for item in order.items:
+                product = Product.query.get(item.product_id)
+                if product:
+                    product.change_stock(item.qty)
+        
         order.status = status
         h = OrderHistory(order_id=order.id, status=status, operator=str(uid), operated_at=datetime.now(), remark=remark)
         db.session.add(h)
@@ -119,8 +127,15 @@ def create_order():
     """
     data = request.get_json() or {}
     user_id = int(get_jwt_identity())
-    # 自動產生訂單編號
-    order_sn = f"OMS{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(100,999)}"
+    # 自動產生唯一訂單編號 - 避免競態條件
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        order_sn = f"OMS{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000,9999)}"
+        existing_order = Order.query.filter_by(order_sn=order_sn).first()
+        if not existing_order:
+            break
+        if attempt == max_attempts - 1:
+            abort(500, description="無法生成唯一訂單編號，請稍後重試")
     receiver_name = data.get('receiver_name')
     receiver_phone = data.get('receiver_phone')
     shipping_address = data.get('shipping_address')
@@ -156,13 +171,17 @@ def create_order():
     # 狀態歷史
     db.session.add(OrderHistory(order_id=order.id, status='pending', operator=str(user_id), operated_at=datetime.now(), remark='訂單建立'))
     # 扣減商品庫存
-    for item in items:
-        product = Product.query.get(item['product_id'])
-        if not product:
-            abort(400, description=f"找不到商品 {item['product_id']}")
-        if product.stock < item['qty']:
-            abort(400, description=f"商品 {product.name} 庫存不足")
-        product.change_stock(-item['qty'])
+    try:
+        for item in items:
+            product = Product.query.get(item['product_id'])
+            if not product:
+                abort(400, description=f"找不到商品 {item['product_id']}")
+            if product.stock < item['qty']:
+                abort(400, description=f"商品 {product.name} 庫存不足，現有庫存: {product.stock}")
+            product.change_stock(-item['qty'])
+    except ValueError as e:
+        db.session.rollback()
+        abort(400, description=str(e))
     db.session.commit()
     return jsonify(order.to_dict(include_items=True, include_history=True)), 201
 

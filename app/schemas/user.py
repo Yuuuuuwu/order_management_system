@@ -4,6 +4,7 @@ class UserSchema(Schema):
     id = fields.Int(dump_only=True)
     username = fields.Str(required=True, validate=validate.Length(min=2))
     email = fields.Email(required=True)
+    password = fields.Str(load_only=True, validate=validate.Length(min=6))
     phone = fields.Str(required=False, allow_none=True, validate=validate.Length(max=40))
     role = fields.Str(validate=validate.OneOf(["admin", "seller", "customer"]))
     is_active = fields.Boolean()

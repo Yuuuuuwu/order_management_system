@@ -1,0 +1,78 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Set up environment variables
+      run: |
+        echo "DATABASE_URL=mysql+pymysql://root:root@localhost:3306/test_db" >> $GITHUB_ENV
+        echo "JWT_SECRET_KEY=test-secret-key" >> $GITHUB_ENV
+        echo "SECRET_KEY=test-secret-key" >> $GITHUB_ENV
+        echo "FLASK_ENV=testing" >> $GITHUB_ENV
+    
+    - name: Wait for MySQL
+      run: |
+        while ! mysqladmin ping -h "127.0.0.1" --silent; do
+          sleep 1
+        done
+    
+    - name: Run database migrations
+      run: |
+        flask db upgrade
+      env:
+        FLASK_APP: run.py
+    
+    - name: Run tests
+      run: |
+        pytest -v
+      env:
+        FLASK_APP: run.py
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Deploy to Render
+      run: |
+        echo "部署到 Render（Render 會自動偵測 git push）"
+        echo "如需手動觸發，可使用 Render API 或 webhook"

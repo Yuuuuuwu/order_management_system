@@ -58,6 +58,7 @@ class Product(db.Model):
 
     def change_stock(self, delta):
         """庫存異動（正數進貨，負數銷售）"""
-        self.stock += delta
-        if self.stock < 0:
-            self.stock = 0
+        new_stock = self.stock + delta
+        if new_stock < 0:
+            raise ValueError(f"庫存不足，當前庫存: {self.stock}, 要求變更: {delta}")
+        self.stock = new_stock
