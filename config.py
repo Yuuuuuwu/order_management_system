@@ -57,8 +57,12 @@ class RenderConfig(BaseConfig):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         SQLALCHEMY_DATABASE_URI = database_url
     else:
-        # 如果 DATABASE_URL 不存在，拋出錯誤
-        raise ValueError("DATABASE_URL environment variable is required for Render deployment")
+        # 只有當環境為 render 時才需要 DATABASE_URL
+        if os.getenv("FLASK_ENV") == "render":
+            raise ValueError("DATABASE_URL environment variable is required for Render deployment")
+        else:
+            # 測試環境使用預設值
+            SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     
     # Render 特殊設定
     SQLALCHEMY_ENGINE_OPTIONS = {

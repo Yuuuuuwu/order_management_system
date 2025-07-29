@@ -217,7 +217,7 @@ def ecpay_callback():
             order.status = 'paid'
             order.payment_status = 'paid'
 
-            # 創建付款記錄
+
             payment = Payment(
                 order_id=order.id,
                 amount=order.total_amount,
