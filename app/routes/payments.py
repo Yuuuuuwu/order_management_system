@@ -162,7 +162,7 @@ def ecpay_return():
 
     # 假設你的 order_sn 就存於 Order model
     # 於回調裡可以依 trade_no 解析訂單 id 或查資料庫拿 order_sn
-    order = Order.query.filter_by(order_sn=trade_no).first()
+    order = Order.query.filter_by(trade_no=trade_no).first()
     order_sn = trade_no if order else ''
 
     # 組成前端要的 URL (使用你的前端網域與路由)
