@@ -9,8 +9,8 @@ class Order(db.Model):  # 訂單主表
     id = db.Column(db.Integer, primary_key=True)  # 主鍵，自動遞增
     order_sn = db.Column(db.String(64), unique=True, nullable=False)  # 訂單編號，必填且不可重複
     trade_no = db.Column(db.String(20), unique=True, nullable=True)  # 交易編號
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # 對應 user 表的 id（外鍵），不可為空
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)  # 對應 customer 表的 id（可空）
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable=False)  # 對應 user 表的 id（外鍵），不可為空
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id', ondelete='SET NULL'), nullable=True)  # 對應 customer 表的 id（可空）
     total_amount = db.Column(db.Float, nullable=False)  # 總金額，必填
     status = db.Column(db.String(20), default='pending', nullable=False)  # 訂單狀態，預設為 pending
     shipping_fee = db.Column(db.Float, default=0, nullable=False)  # 運費，預設為 0
@@ -65,8 +65,8 @@ class OrderItem(db.Model):  # 商品明細資料表（子表）
     __tablename__ = 'order_items'  # 對應資料庫中的表名
 
     id = db.Column(db.Integer, primary_key=True)  # 主鍵
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)  # 外鍵：對應到訂單
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)  # 外鍵：對應到產品
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)  # 外鍵：對應到訂單
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='RESTRICT'), nullable=False)  # 外鍵：對應到產品
     product_name = db.Column(db.String(120), nullable=False)  # 商品名稱
     qty = db.Column(db.Integer, nullable=False)  # 數量
     price = db.Column(db.Float, nullable=False)  # 價格（單價）
@@ -88,7 +88,7 @@ class OrderHistory(db.Model):  # 訂單歷史紀錄（例如狀態變更）
     __tablename__ = 'order_histories'  # 對應資料表名稱
 
     id = db.Column(db.Integer, primary_key=True)  # 主鍵
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)  # 外鍵：對應訂單
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)  # 外鍵：對應訂單
     status = db.Column(db.String(20), nullable=False)  # 訂單狀態（例如：pending、shipped、completed）
     operator = db.Column(db.String(64), nullable=False)  # 操作人（系統或後台人員）
     operated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # 操作時間
