@@ -43,6 +43,13 @@ def get_product(pid):
 @jwt_required()
 def create_product():
     """新增商品"""
+    # 權限檢查：只有 admin 和 seller 可以建立商品
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role not in ['admin', 'seller']:
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員和銷售員可以建立商品'}), 403
+    
     data = request.get_json() or {}
     name = data.get('name')
     price = data.get('price')
@@ -72,6 +79,13 @@ def create_product():
 @jwt_required()
 def update_product(pid):
     """編輯商品"""
+    # 權限檢查：只有 admin 和 seller 可以編輯商品
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role not in ['admin', 'seller']:
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員和銷售員可以編輯商品'}), 403
+    
     p = Product.query.get_or_404(pid)
     data = request.get_json() or {}
     for field in ['name', 'price', 'promo_price', 'stock', 'desc', 'image_url', 'is_active', 'category_id']:
@@ -84,6 +98,13 @@ def update_product(pid):
 @jwt_required()
 def delete_product(pid):
     """刪除商品"""
+    # 權限檢查：只有 admin 可以刪除商品
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role != 'admin':
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員可以刪除商品'}), 403
+    
     p = Product.query.get_or_404(pid)
     db.session.delete(p)
     db.session.commit()
@@ -93,6 +114,13 @@ def delete_product(pid):
 @jwt_required()
 def batch_active():
     """批次上下架商品"""
+    # 權限檢查：只有 admin 和 seller 可以批次上下架
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role not in ['admin', 'seller']:
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員和銷售員可以批次上下架商品'}), 403
+    
     data = request.get_json() or {}
     ids = data.get('ids', [])
     is_active = data.get('is_active', True)
@@ -107,6 +135,12 @@ def batch_active():
 @jwt_required()
 def change_stock(pid):
     """庫存異動（進貨/銷售）"""
+    # 權限檢查：只有 admin 和 seller 可以異動庫存
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role not in ['admin', 'seller']:
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員和銷售員可以異動庫存'}), 403
     p = Product.query.get_or_404(pid)
     data = request.get_json() or {}
     delta = data.get('delta')

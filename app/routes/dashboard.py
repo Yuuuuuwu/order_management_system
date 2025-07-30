@@ -12,7 +12,7 @@ bp_dashboard = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 def summary():
     claims = get_jwt()
     # 允許所有登入用戶查看統計
-    if claims.get('role') not in ['admin', 'manager', 'seller']:
+    if claims.get('role') not in ['admin', 'seller']:
         return jsonify({'msg': 'Permission denied'}), 403
     
     # 統計資料

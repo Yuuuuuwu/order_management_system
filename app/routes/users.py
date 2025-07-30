@@ -10,6 +10,7 @@ bp_users = Blueprint('users', __name__, url_prefix='/users')
 
 # ─────────────  Create  ─────────────
 @bp_users.route('', methods=['POST'])
+@jwt_required()
 def create_user():
 
     """
@@ -33,6 +34,13 @@ def create_user():
       400:
         description: 欄位驗證失敗
     """
+    # 權限檢查：只有 admin 可以建立使用者
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role != 'admin':
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員可以建立使用者'}), 403
+    
     payload = request.get_json() or {}
     try:
         valid = user_schema.load(payload)
@@ -127,6 +135,7 @@ def get_user(user_id):
 
 # ─────────────  Update  ─────────────
 @bp_users.route('/<int:user_id>', methods=['PUT'])
+@jwt_required()
 def update_user(user_id):
 
     """
@@ -158,6 +167,14 @@ def update_user(user_id):
       404:
         description: 使用者不存在
     """
+    # 權限檢查：admin 可以修改任何使用者，其他使用者只能修改自己
+    current_user_claims = get_jwt()
+    current_user_id = current_user_claims.get('user_id')
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role != 'admin' and current_user_id != user_id:
+        return jsonify({'code': 403, 'message': '權限不足，只能修改自己的資料'}), 403
+    
     payload = request.get_json() or {}
     try:
         valid = user_schema.load(payload, partial=True)
@@ -172,6 +189,9 @@ def update_user(user_id):
     if 'phone' in valid:
         u.phone = valid['phone']
     if 'role' in payload:
+        # 只有 admin 可以修改角色
+        if current_user_role != 'admin':
+            return jsonify({'code': 403, 'message': '權限不足，只有管理員可以修改使用者角色'}), 403
         if payload['role'] not in ("admin", "seller", "customer"):
             return jsonify({"code": 400, "name": "Bad Request", "errors": {"role": "role 必須是 'admin', 'seller' 或 'customer'"}}), 400
         u.role = payload['role']
@@ -183,6 +203,7 @@ def update_user(user_id):
 
 # ─────────────  Delete  ─────────────
 @bp_users.route('/<int:user_id>', methods=['DELETE'])
+@jwt_required()
 def delete_user(user_id):
     """
     刪除使用者 (Delete a user)
@@ -202,6 +223,13 @@ def delete_user(user_id):
       404:
         description: 使用者不存在
     """
+    # 權限檢查：只有 admin 可以刪除使用者
+    current_user_claims = get_jwt()
+    current_user_role = current_user_claims.get('role', 'customer')
+    
+    if current_user_role != 'admin':
+        return jsonify({'code': 403, 'message': '權限不足，只有管理員可以刪除使用者'}), 403
+    
     u = User.query.get_or_404(user_id, description="找不到使用者")
     try:
         db.session.delete(u)
