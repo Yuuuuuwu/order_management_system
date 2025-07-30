@@ -198,10 +198,10 @@ def ecpay_callback():
         mac_valid = verify_check_mac_value(data)
         current_app.logger.info(f"MAC 驗證結果: {mac_valid}")
 
-        # 暫時跳過 MAC 驗證來測試
-        # if not mac_valid:
-        #     current_app.logger.error("MAC 驗證失敗")
-        #     return '0|MAC驗證失敗'
+        # MAC 值驗證 - 重新啟用安全驗證
+        if not mac_valid:
+            current_app.logger.error("MAC 驗證失敗")
+            return '0|MAC驗證失敗'
 
         if rtn_code == '1':
             current_app.logger.info(f"交易成功，查詢訂單...")
