@@ -11,10 +11,13 @@ class TestIntegrationFlow:
     def test_complete_ecommerce_flow(self, client, app):
         """測試完整的電商流程：註冊→建立商品→下單→付款"""
         
+        import uuid
+        unique_id = uuid.uuid4().hex[:8]
+        
         # 1. 註冊管理員
         admin_response = client.post('/auth/register', json={
-            'username': 'flowadmin',
-            'email': 'admin@flow.com',
+            'username': f'flowadmin_{unique_id}',
+            'email': f'admin_{unique_id}@flow.com',
             'password': 'admin123',
             'role': 'admin'
         })
@@ -22,7 +25,7 @@ class TestIntegrationFlow:
         
         # 2. 管理員登入
         admin_login = client.post('/auth/login', json={
-            'username': 'flowadmin',
+            'username': f'flowadmin_{unique_id}',
             'password': 'admin123'
         })
         assert admin_login.status_code == 200
@@ -55,15 +58,16 @@ class TestIntegrationFlow:
             'name': '整合測試客戶',
             'email': 'customer@flow.com',
             'phone': '0912345678',
-            'address': '整合測試地址'
+            'address': '整合測試地址',
+            'tags': []  # 明確提供空的tags數組
         })
         assert customer_response.status_code == 201
         customer = customer_response.get_json()
         
         # 6. 註冊一般客戶使用者
         user_response = client.post('/auth/register', json={
-            'username': 'flowcustomer',
-            'email': 'user@flow.com',
+            'username': f'flowcustomer_{unique_id}',
+            'email': f'user_{unique_id}@flow.com',
             'password': 'user123',
             'role': 'customer'
         })
@@ -71,7 +75,7 @@ class TestIntegrationFlow:
         
         # 7. 客戶登入
         user_login = client.post('/auth/login', json={
-            'username': 'flowcustomer',
+            'username': f'flowcustomer_{unique_id}',
             'password': 'user123'
         })
         assert user_login.status_code == 200
@@ -150,7 +154,7 @@ class TestIntegrationFlow:
             'CheckMacValue': 'test_mac'
         }
         
-        with patch('app.utils.check_mac_value.verify_check_mac_value') as mock_verify:
+        with patch('app.routes.payments.verify_check_mac_value') as mock_verify:
             mock_verify.return_value = True
             
             callback_response = client.post('/payments/ecpay/callback', 

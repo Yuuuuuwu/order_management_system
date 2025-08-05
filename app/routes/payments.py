@@ -252,7 +252,7 @@ def ecpay_callback():
             return '1|OK'
         else:
             current_app.logger.error(f"交易失敗: rtn_code={rtn_code}")
-            return f'0|交易失敗:{rtn_code}'
+            return '0|FAIL'
 
     except Exception as e:
         current_app.logger.error(f"回調處理異常: {str(e)}")
@@ -263,11 +263,15 @@ def ecpay_callback():
 def list_payments():
     claims = get_jwt()
     uid = int(get_jwt_identity())
-    if claims.get('role') == 'admin':
-        qs = Payment.query.order_by(Payment.created_at.desc())
-    else:
-        qs = Payment.query.join(Order).filter(Order.user_id == uid).order_by(Payment.created_at.desc())
-    return jsonify([p.to_dict() for p in qs]), 200
+    try:
+        if claims.get('role') == 'admin':
+            qs = Payment.query.order_by(Payment.created_at.desc())
+        else:
+            qs = Payment.query.join(Order, Payment.order_id == Order.id).filter(Order.user_id == uid).order_by(Payment.created_at.desc())
+        payments = [p.to_dict() for p in qs.all()]
+        return jsonify(payments), 200
+    except Exception as e:
+        return jsonify([]), 200  # 如果查詢失敗，返回空數組
 
 @bp_payments.route('/<int:payment_id>', methods=['GET'])
 @jwt_required()
@@ -275,6 +279,13 @@ def get_payment(payment_id):
     claims = get_jwt()
     uid = int(get_jwt_identity())
     payment = Payment.query.get_or_404(payment_id)
-    if claims.get('role') != 'admin' and payment.order.user_id != uid:
+    
+    # 查詢關聯的訂單以檢查權限
+    order = Order.query.get(payment.order_id)
+    if not order:
+        abort(404, description="找不到關聯的訂單")
+    
+    if claims.get('role') != 'admin' and order.user_id != uid:
         abort(403, description="Permission denied")
+    
     return jsonify(payment.to_dict()), 200

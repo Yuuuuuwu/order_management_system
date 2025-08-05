@@ -13,3 +13,20 @@ class Payment(db.Model):
     paid_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
+    
+    # 關聯關係
+    order = db.relationship('Order', backref='payments')
+    
+    def to_dict(self):
+        """將模型轉換為字典"""
+        return {
+            'id': self.id,
+            'order_id': self.order_id,
+            'amount': self.amount,
+            'status': self.status,
+            'payment_method': self.payment_method,
+            'transaction_id': self.transaction_id,
+            'paid_at': self.paid_at.isoformat() if self.paid_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

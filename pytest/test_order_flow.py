@@ -36,8 +36,10 @@ class TestOrderFlow:
         response = client.get('/orders', headers=customer_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert len(data) >= 1
-        order = data[0]
+        assert 'data' in data
+        assert 'total' in data
+        assert len(data['data']) >= 1
+        order = data['data'][0]
         assert order['status'] == 'pending'
         assert 'order_sn' in order
     
@@ -46,7 +48,9 @@ class TestOrderFlow:
         response = client.get('/orders', headers=admin_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert len(data) >= 1
+        assert 'data' in data
+        assert 'total' in data
+        assert len(data['data']) >= 1
     
     def test_get_order_detail_owner(self, client, customer_headers, test_order):
         """測試訂單擁有者查看訂單詳情"""  

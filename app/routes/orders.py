@@ -92,11 +92,13 @@ def get_order_history(order_id):
 @jwt_required()
 def batch_update_status():
     data = request.get_json() or {}
-    ids = data.get('ids', [])
+    ids = data.get('order_ids', data.get('ids', []))  # 支援兩種參數名稱
     status = data.get('status')
     remark = data.get('remark')
     claims = get_jwt()
     uid = int(get_jwt_identity())
+    updated_count = 0
+    
     for oid in ids:
         order = Order.query.get(oid)
         if not order:
@@ -115,9 +117,14 @@ def batch_update_status():
         h = OrderHistory(order_id=order.id, status=status, operator=str(uid), operated_at=datetime.now(), remark=remark)
         db.session.add(h)
         # 狀態異動通知（站內）
-        create_notification(order.user_id, 'order_status', f'訂單狀態更新', f'您的訂單 {order.id} 狀態已變更為 {order.status}')
+        create_notification(order.user_id, 'order_status', f'訂單狀態更新', f'您的訂單 {order.order_sn} 狀態已變更為 {order.status}')
+        updated_count += 1
+        
     db.session.commit()
-    return jsonify({'msg': '狀態更新成功'})
+    return jsonify({
+        'msg': '狀態更新成功',
+        'updated_count': updated_count
+    })
 
 @bp_orders.route('', methods=['POST'])
 @jwt_required()
@@ -194,14 +201,41 @@ def update_order(order_id):
     if claims.get("role") != "admin" and o.user_id != uid:
         abort(404, description="找不到或無權限修改此訂單")
     data = request.get_json() or {}
+    
+    # 狀態更新只有管理員可以執行
+    if 'status' in data:
+        if claims.get('role') != 'admin':
+            abort(403, description="只有管理員可以更新訂單狀態")
+        
+        # 如果是取消訂單，恢復庫存
+        if data['status'] == 'cancelled' and o.status != 'cancelled':
+            for item in o.items:
+                product = Product.query.get(item.product_id)
+                if product:
+                    product.change_stock(item.qty)
+        
+        o.status = data['status']
+        # 記錄狀態變更歷史
+        h = OrderHistory(
+            order_id=o.id, 
+            status=data['status'], 
+            operator=str(uid), 
+            operated_at=datetime.now(), 
+            remark=data.get('remark', '')
+        )
+        db.session.add(h)
+        # 狀態異動通知
+        create_notification(o.user_id, 'order_status', '訂單狀態更新', f'您的訂單 {o.order_sn} 狀態已變更為 {o.status}')
+    
     if 'receiver_name' in data:
         o.receiver_name = data['receiver_name']
     if 'receiver_phone' in data:
         o.receiver_phone = data['receiver_phone']
     if 'shipping_address' in data:
         o.shipping_address = data['shipping_address']
-    if 'remark' in data:
+    if 'remark' in data and 'status' not in data:  # 避免重複設置 remark
         o.remark = data['remark']
+    
     # 商品明細可編輯（僅未結單）
     if o.status == 'pending' and 'items' in data:
         OrderItem.query.filter_by(order_id=o.id).delete()
