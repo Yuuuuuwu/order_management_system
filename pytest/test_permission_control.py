@@ -21,15 +21,19 @@ class TestPermissionControl:
         assert response.status_code == 200
         data = response.get_json()
         # 客戶應該只能看到自己的資料
-        assert len(data) == 1
-        assert data[0]['role'] == 'customer'
+        assert 'data' in data
+        assert 'total' in data
+        assert len(data['data']) == 1
+        assert data['data'][0]['role'] == 'customer'
     
     def test_admin_access_all_orders(self, client, admin_headers, test_order):
         """測試管理員可存取所有訂單"""
         response = client.get('/orders', headers=admin_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert len(data) >= 1
+        assert 'data' in data
+        assert 'total' in data
+        assert len(data['data']) >= 1
     
     def test_customer_access_own_orders_only(self, client, customer_headers, test_order):
         """測試客戶只能存取自己的訂單"""
@@ -37,7 +41,8 @@ class TestPermissionControl:
         assert response.status_code == 200
         data = response.get_json()
         # 驗證回傳的訂單都屬於該客戶
-        for order in data:
+        assert 'data' in data
+        for order in data['data']:
             assert order['user_id'] == test_order.user_id
     
     def test_customer_cannot_access_other_order(self, client, admin_user, test_order, app):
@@ -47,10 +52,15 @@ class TestPermissionControl:
             from app.models import User
             from werkzeug.security import generate_password_hash
             from app import db
+            import uuid
+            
+            # 使用唯一的用戶名避免衝突
+            unique_username = f"othercustomer_{uuid.uuid4().hex[:8]}"
+            unique_email = f"other_{uuid.uuid4().hex[:8]}@test.com"
             
             other_customer = User(
-                username="othercustomer",
-                email="other@test.com",
+                username=unique_username,
+                email=unique_email,
                 password_hash=generate_password_hash("password123"),
                 role="customer"
             )
@@ -59,10 +69,13 @@ class TestPermissionControl:
         
         # 其他客戶登入
         login_response = client.post('/auth/login', json={
-            'username': 'othercustomer',
+            'username': unique_username,
             'password': 'password123'
         })
-        other_headers = {'Authorization': f'Bearer {login_response.get_json()["access_token"]}'}
+        assert login_response.status_code == 200
+        login_data = login_response.get_json()
+        assert 'access_token' in login_data
+        other_headers = {'Authorization': f'Bearer {login_data["access_token"]}'}
         
         # 嘗試存取不屬於自己的訂單
         response = client.get(f'/orders/{test_order.id}', headers=other_headers)
@@ -119,7 +132,7 @@ class TestPermissionControl:
         response = client.get('/dashboard/summary', headers=admin_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert 'orders_count' in data or 'summary' in data
+        assert 'order_count' in data or 'total_sales' in data
     
     def test_unauthenticated_cannot_access_protected_routes(self, client):
         """測試未認證使用者無法存取受保護路由"""

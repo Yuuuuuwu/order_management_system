@@ -94,8 +94,17 @@ def login():
     使用者登入 (Login)
     """
     data = request.get_json() or {}
-    # 改為用 email 查詢
-    user = User.query.filter_by(email=data.get('email')).first()
+    
+    # 支援用 username 或 email 登入
+    username_or_email = data.get('username') or data.get('email')
+    if not username_or_email:
+        abort(400, description="請提供使用者名稱或email")
+    
+    # 先試 username，再試 email
+    user = User.query.filter_by(username=username_or_email).first()
+    if not user:
+        user = User.query.filter_by(email=username_or_email).first()
+    
     if not user or not check_password_hash(user.password_hash, data.get('password', '')):
         abort(401, description="帳號或密碼錯誤")
 

@@ -9,29 +9,31 @@ import csv, io
 def sales_summary(period='day', start=None, end=None):
     # period: day/month/year
     q = db.session.query(
-        func.date_format(Order.created_at, '%Y-%m-%d' if period=='day' else ('%Y-%m' if period=='month' else '%Y')),
-        func.sum(Order.total_amount)
+        func.date_format(Order.created_at, '%Y-%m-%d' if period=='day' else ('%Y-%m' if period=='month' else '%Y')).label('date'),
+        func.count(Order.id).label('order_count'),
+        func.sum(Order.total_amount).label('total_amount')
     )
     if start:
         q = q.filter(Order.created_at >= start)
     if end:
         q = q.filter(Order.created_at <= end)
     q = q.group_by(1).order_by(1)
-    return [{'period': r[0], 'total': float(r[1])} for r in q.all()]
+    return [{'date': r[0], 'order_count': int(r[1]), 'total_amount': float(r[2])} for r in q.all()]
 
 def product_sales_ranking(start=None, end=None, limit=10):
     from app.models.order import OrderItem
     q = db.session.query(
         Product.name,
-        func.sum(OrderItem.quantity).label('qty'),
-        func.sum(OrderItem.subtotal).label('amount')
-    ).join(OrderItem, Product.id==OrderItem.product_id)
+        func.sum(OrderItem.qty).label('total_qty'),
+        func.sum(OrderItem.qty * OrderItem.price).label('total_amount')
+    ).join(OrderItem, Product.id==OrderItem.product_id)\
+     .join(Order, OrderItem.order_id==Order.id)
     if start:
-        q = q.filter(OrderItem.created_at >= start)
+        q = q.filter(Order.created_at >= start)
     if end:
-        q = q.filter(OrderItem.created_at <= end)
-    q = q.group_by(Product.id).order_by(func.sum(OrderItem.quantity).desc()).limit(limit)
-    return [{'product': r[0], 'quantity': int(r[1]), 'amount': float(r[2])} for r in q.all()]
+        q = q.filter(Order.created_at <= end)
+    q = q.group_by(Product.id).order_by(func.sum(OrderItem.qty).desc()).limit(limit)
+    return [{'product_name': r[0], 'total_qty': int(r[1]), 'total_amount': float(r[2])} for r in q.all()]
 
 def customer_sales_summary():
     q = db.session.query(
@@ -63,4 +65,20 @@ def export_products_csv(products):
     writer.writerow(['商品ID', '名稱', '分類', '價格', '促銷價', '庫存'])
     for p in products:
         writer.writerow([p.id, p.name, p.category_id, p.price, p.promo_price, p.stock])
+    return output.getvalue()
+
+def export_order_stats_csv(data):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['日期', '訂單數', '總金額'])
+    for item in data:
+        writer.writerow([item['date'], item['order_count'], item['total_amount']])
+    return output.getvalue()
+
+def export_product_rank_csv(data):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['商品名稱', '銷售數量', '銷售金額'])
+    for item in data:
+        writer.writerow([item['product_name'], item['total_qty'], item['total_amount']])
     return output.getvalue()

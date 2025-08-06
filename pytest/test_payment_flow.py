@@ -24,15 +24,17 @@ class TestPaymentFlow:
         """測試付款已付款的訂單"""
         # 先將訂單設為已付款
         with app.app_context():
-            test_order.status = 'paid'
             from app import db
+            from app.models import Order
+            order = Order.query.get(test_order.id)
+            order.status = 'paid'
             db.session.commit()
         
         response = client.post(f'/payments/{test_order.id}', 
                               headers=customer_headers)
         assert response.status_code == 400
         data = response.get_json()
-        assert '已付款或已取消' in data.get('description', '')
+        assert '已付款或已取消' in data.get('message', data.get('description', ''))
     
     def test_payment_nonexistent_order(self, client, customer_headers):
         """測試付款不存在的訂單"""
@@ -58,10 +60,13 @@ class TestPaymentFlow:
         """測試綠界付款成功回調"""
         # 確保訂單有 trade_no
         with client.application.app_context():
-            if not test_order.trade_no:
-                test_order.trade_no = f"TEST{test_order.id}123456"
-                from app import db
+            from app.models import Order
+            from app import db
+            order = Order.query.get(test_order.id)
+            if not order.trade_no:
+                order.trade_no = f"TEST{order.id}123456"
                 db.session.commit()
+                test_order.trade_no = order.trade_no  # 更新測試對象
         
         callback_data = {
             'MerchantTradeNo': test_order.trade_no,
@@ -71,7 +76,7 @@ class TestPaymentFlow:
             'CheckMacValue': 'dummy_mac'
         }
         
-        with patch('app.utils.check_mac_value.verify_check_mac_value') as mock_verify:
+        with patch('app.routes.payments.verify_check_mac_value') as mock_verify:
             mock_verify.return_value = True
             
             response = client.post('/payments/ecpay/callback', data=callback_data)
@@ -87,9 +92,12 @@ class TestPaymentFlow:
             'CheckMacValue': 'dummy_mac'
         }
         
-        response = client.post('/payments/ecpay/callback', data=callback_data)
-        assert response.status_code == 200
-        assert response.get_data(as_text=True) == '0|FAIL'
+        with patch('app.routes.payments.verify_check_mac_value') as mock_verify:
+            mock_verify.return_value = True
+            
+            response = client.post('/payments/ecpay/callback', data=callback_data)
+            assert response.status_code == 200
+            assert response.get_data(as_text=True) == '0|FAIL'
     
     def test_ecpay_return_redirect(self, client, test_order):
         """測試綠界付款導回"""

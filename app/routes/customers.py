@@ -33,11 +33,20 @@ def get_customer(customer_id):
 @bp_customers.route('', methods=['POST'])
 def create():
     """新增客戶"""
-    form = CustomerForm(data=request.json)
-    if form.validate():
-        customer = create_customer(form.data)
-        return jsonify(CustomerSchema().dump(customer)), 201
-    return jsonify({'error': form.errors}), 400
+    try:
+        form = CustomerForm(data=request.json)
+        if form.validate():
+            data = form.data.copy()
+            # 處理 tags 格式轉換：陣列 -> 字串
+            if isinstance(data.get('tags'), list):
+                data['tags'] = ','.join(data['tags'])
+            customer = create_customer(data)
+            return jsonify(CustomerSchema().dump(customer)), 201
+        return jsonify({'error': form.errors}), 400
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @bp_customers.route('/<int:customer_id>', methods=['PUT'])
 def update(customer_id):
@@ -47,7 +56,11 @@ def update(customer_id):
         return jsonify({'error': 'Not found'}), 404
     form = CustomerForm(data=request.json)
     if form.validate():
-        customer = update_customer(customer, form.data)
+        data = form.data.copy()
+        # 處理 tags 格式轉換：陣列 -> 字串
+        if isinstance(data.get('tags'), list):
+            data['tags'] = ','.join(data['tags'])
+        customer = update_customer(customer, data)
         return jsonify(CustomerSchema().dump(customer))
     return jsonify({'error': form.errors}), 400
 

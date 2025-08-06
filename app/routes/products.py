@@ -122,14 +122,21 @@ def batch_active():
         return jsonify({'code': 403, 'message': '權限不足，只有管理員和銷售員可以批次上下架商品'}), 403
     
     data = request.get_json() or {}
-    ids = data.get('ids', [])
+    ids = data.get('product_ids', data.get('ids', []))  # 支援兩種參數名稱
     is_active = data.get('is_active', True)
+    updated_count = 0
+    
     for pid in ids:
         p = Product.query.get(pid)
         if p:
             p.is_active = is_active
+            updated_count += 1
     db.session.commit()
-    return jsonify({'msg': '批次上下架完成'})
+    
+    return jsonify({
+        'msg': '批次上下架完成',
+        'updated_count': updated_count
+    })
 
 @bp_products.route('/<int:pid>/stock', methods=['PUT'])
 @jwt_required()
