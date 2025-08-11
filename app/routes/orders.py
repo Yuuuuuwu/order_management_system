@@ -133,7 +133,9 @@ def create_order():
     建立新訂單 (Create a new order)
     """
     data = request.get_json() or {}
+    current_app.logger.info(f"收到建立訂單請求: {data}")
     user_id = int(get_jwt_identity())
+    current_app.logger.info(f"用戶 ID: {user_id}")
     # 自動產生唯一訂單編號 - 避免競態條件
     max_attempts = 10
     for attempt in range(max_attempts):
@@ -148,17 +150,50 @@ def create_order():
     shipping_address = data.get('shipping_address')
     remark = data.get('remark')
     items = data.get('items', [])
-    if not all([receiver_name, receiver_phone, shipping_address, items]):
-        abort(400, description="缺少必要欄位")
+    # 詳細驗證每個欄位
+    missing_fields = []
+    if not receiver_name:
+        missing_fields.append("receiver_name")
+    if not receiver_phone:
+        missing_fields.append("receiver_phone")
+    if not shipping_address:
+        missing_fields.append("shipping_address")
+    if not items:
+        missing_fields.append("items")
+    
+    if missing_fields:
+        abort(400, description=f"缺少必要欄位: {', '.join(missing_fields)}")
+    # 驗證商品項目
+    if not isinstance(items, list):
+        abort(400, description="items 必須是陣列")
+    
     # 計算金額
     total_amount = 0
-    for item in items:
-        product = Product.query.get(item['product_id'])
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            abort(400, description=f"items[{i}] 必須是物件")
+        
+        if 'product_id' not in item:
+            abort(400, description=f"items[{i}] 缺少 product_id")
+        if 'qty' not in item:
+            abort(400, description=f"items[{i}] 缺少 qty")
+        
+        try:
+            product_id = int(item['product_id'])
+            qty = int(item['qty'])
+        except (ValueError, TypeError):
+            abort(400, description=f"items[{i}] product_id 和 qty 必須是數字")
+        
+        if qty <= 0:
+            abort(400, description=f"items[{i}] qty 必須大於 0")
+        
+        product = Product.query.get(product_id)
         if not product:
-            abort(400, description=f"找不到商品 {item['product_id']}")
+            abort(400, description=f"找不到商品 ID: {product_id}")
+        
         item['product_name'] = product.name
         item['price'] = product.price
-        total_amount += product.price * item['qty']
+        total_amount += product.price * qty
     order = Order(
         user_id=user_id,
         order_sn=order_sn,
