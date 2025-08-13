@@ -9,7 +9,7 @@
 
 ## 目前此後端已部署到Render雲端平台上。
 
-網址:https://oms-backend-d0yc.onrender.com
+網址:[https://oms-backend-d0yc.onrender.com](https://oms-frontend-ixkl.onrender.com/)
 
 ## 📋 目錄
 
@@ -124,10 +124,3 @@ order_management_system/
 ├── run.py                     # 應用程式入口
 └── requirements.txt           # Python 依賴
 ```
-
-
-感謝所有貢獻者的努力，讓這個專案變得更好！
-
----
-
-**OMS 訂單管理系統** - 讓電子商務管理變得簡單高效！
