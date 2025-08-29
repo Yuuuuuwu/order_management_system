@@ -45,3 +45,4 @@ wtforms==3.2.1
 python-dotenv
 email_validator
 Faker
+pymysql

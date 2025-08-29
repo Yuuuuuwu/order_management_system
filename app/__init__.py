@@ -8,6 +8,7 @@ from flask_cors import CORS  # 處理跨域請求 (CORS)
 from config import DevelopmentConfig, TestingConfig, ProductionConfig, RenderConfig  # 匯入自定義設定檔
 import os  # 用來操作環境變數
 from dotenv import load_dotenv  # 讀取 .env 檔案中的環境變數
+from flasgger import Swagger  # 加入 Swagger 套件
 
 load_dotenv()  # 載入 .env 檔案的環境變數
 
@@ -39,6 +40,9 @@ def create_app():
 
     # 設定 CORS，允許前端網址從 config 讀取
     CORS(app, resources={r"/*": {"origins": app.config["FRONTEND_URL"]}}, supports_credentials=True)
+
+    # 加入 Swagger UI 註冊
+    Swagger(app)
 
     app.url_map.strict_slashes = False  # 關閉嚴格尾斜線檢查，避免 /api 和 /api/ 被視為不同路徑
 

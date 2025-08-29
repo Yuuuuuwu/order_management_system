@@ -12,27 +12,48 @@ bp_users = Blueprint('users', __name__, url_prefix='/users')
 @bp_users.route('', methods=['POST'])
 @jwt_required()
 def create_user():
-
     """
     新增使用者 (Create a new user)
     ---
     tags:
       - Users
-    consumes:
-      - application/json
-    parameters:
-      - in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/components/schemas/UserInput'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserInput'
     responses:
       201:
         description: 使用者建立成功
-        schema:
-          $ref: '#/components/schemas/User'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
       400:
         description: 欄位驗證失敗
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                name:
+                  type: string
+                errors:
+                  type: object
+      403:
+        description: 權限不足
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                message:
+                  type: string
     """
     # 權限檢查：只有 admin 可以建立使用者
     current_user_claims = get_jwt()
@@ -122,6 +143,15 @@ def get_user(user_id):
           application/json:
             schema:
               $ref: '#/components/schemas/User'
+      403:
+        description: 權限不足
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
       404:
         description: 使用者不存在
     """
@@ -137,14 +167,11 @@ def get_user(user_id):
 @bp_users.route('/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def update_user(user_id):
-
     """
     更新使用者資料 (Update a user)
     ---
     tags:
       - Users
-    consumes:
-      - application/json
     parameters:
       - in: path
         name: user_id
@@ -152,18 +179,43 @@ def update_user(user_id):
         schema:
           type: integer
         description: 使用者 ID
-      - in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/components/schemas/UserInput'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserInput'
     responses:
       200:
         description: 使用者更新成功
-        schema:
-          $ref: '#/components/schemas/User'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
       400:
         description: 欄位驗證錯誤
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                name:
+                  type: string
+                errors:
+                  type: object
+      403:
+        description: 權限不足
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                message:
+                  type: string
       404:
         description: 使用者不存在
     """
@@ -220,6 +272,24 @@ def delete_user(user_id):
     responses:
       200:
         description: 刪除成功
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      403:
+        description: 權限不足
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                message:
+                  type: string
       404:
         description: 使用者不存在
     """
