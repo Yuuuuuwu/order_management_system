@@ -1,126 +1,114 @@
-# 🛒 OMS 訂單管理系統 - 後端 API
+# 🛒 OMS 訂單管理系統 - 後端 API 
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.1.0-green.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-一個功能完整的訂單管理系統後端 API，基於 Flask 框架開發，提供完整的電子商務後端功能。
+電子商務訂單管理系統後端 API，基於 Flask，支援多角色權限、商品/訂單/支付/報表/通知等完整功能，並具備完善分層、測試與容器化部署。
 
-## 目前此後端已部署到Render雲端平台上。
-
-網址:[https://oms-backend-d0yc.onrender.com](https://oms-frontend-ixkl.onrender.com/)
+---
 
 ## 📋 目錄
+- [功能特色](#功能特色)
+- [API 路由](#api-路由)
+- [技術架構](#技術架構)
+- [專案結構](#專案結構)
+- [測試與部署](#測試與部署)
 
-- [功能特色](#-功能特色)
-- [技術架構](#-技術架構)
-
+---
 
 ## ✨ 功能特色
 
 ### 🔐 認證與授權
-- JWT 基礎的身份驗證
-- 多角色權限管理（管理員、銷售員、客戶）
-- 安全的密碼加密和驗證
-- 自動 Token 刷新機制
+- JWT 驗證，支援多角色（admin/seller/customer）
+- 密碼雜湊、重設密碼、登入紀錄
 
 ### 👥 用戶管理
-- 完整的用戶 CRUD 操作
-- 用戶個人資料管理
-- 角色權限分配
-- 操作歷史追蹤
+- 用戶 CRUD、角色分配、個人資料、權限控管
 
-### 📦 商品管理
-- 多層級商品分類管理
-- 商品庫存追蹤
-- 促銷價格支援
-- 商品圖片管理
+### 📦 商品與分類管理
+- 商品 CRUD、上下架、庫存、描述、分類巢狀結構
+- 商品多層分類、促銷價、圖片欄位
 
 ### 🛒 訂單管理
-- 完整訂單生命週期管理
-- 訂單狀態追蹤
-- 自動庫存扣減
-- 配送資訊管理
+- 訂單 CRUD、訂單編號、狀態流轉、歷史紀錄
+- 訂單明細、庫存自動扣減/恢復、批次狀態更新
 
 ### 💳 支付整合
-- 綠界科技（ECPay）支付整合
-- 多種支付方式支援
-- 支付狀態即時同步
-- 安全的 MAC 值驗證
+- 綠界 ECPay 金流串接、付款狀態同步、MAC 驗證
+- 支援模擬付款、付款紀錄查詢
 
-### 👤 客戶關係管理
-- 客戶資料維護
-- 客戶標籤和分類
-- 購買歷史分析
-- 客戶忠誠度追蹤
+### 👤 客戶管理
+- 客戶 CRUD、標籤、購買歷史、忠誠度
 
-### 📊 報表與分析
-- 銷售統計報表
-- 訂單趨勢分析
-- 庫存狀況監控
-- 業績儀表板數據
+### 📊 報表與儀表板
+- 銷售統計、商品排行、客戶分析、月度趨勢
+- 儀表板 API、資料分群
 
-### 🔔 通知系統
-- 系統通知管理
-- 操作日誌記錄
-- 重要事件提醒
-- Email 通知整合
+### 🔔 通知與日誌
+- 系統通知、訂單/付款/狀態異動推播
+- 操作日誌、審計追蹤
+
+---
+
+## 🛣️ API 路由（主要）
+
+- `/auth/register`  註冊
+- `/auth/login`     登入
+- `/auth/me`        取得自己資訊
+- `/auth/forgot-password` 忘記密碼
+- `/auth/reset-password`  重設密碼
+- `/users`          用戶管理
+- `/products`       商品管理
+- `/categories`     商品分類
+- `/orders`         訂單管理
+- `/payments`       付款/金流
+- `/dashboard/summary` 儀表板統計
+- `/notifications`  通知
+- `/reports`        報表
+- `/customers`      客戶管理
+- `/checkout`       結帳流程
+
+---
 
 ## 🏗️ 技術架構
 
-### 核心框架
-- **Flask 3.1.0** - 輕量級 Web 框架
-- **SQLAlchemy 2.0.40** - ORM 數據庫操作
-- **Flask-Migrate** - 數據庫版本控制
-- **Flask-JWT-Extended** - JWT 認證管理
-- **Flask-CORS** - 跨域請求支援
+- **Flask 3.1.0** / **SQLAlchemy** / **Flask-JWT-Extended**
+- **pytest** 單元/整合測試
+- **Alembic** 資料庫遷移
+- **Docker** / **docker-compose**
+- **ECPay** 金流串接
 
-### 數據庫
-- **MySQL 8.0** - 主要關聯式數據庫
-- **PostgreSQL** - 生產環境支援（Render 部署）
-- **SQLite** - 測試環境
+---
 
-### 開發工具
-- **pytest** - 單元測試框架
-- **Faker** - 測試數據生成
-- **Alembic** - 數據庫遷移工具
-- **Gunicorn** - WSGI 服務器
-
-### 部署與容器化
-- **Docker** - 容器化部署
-- **Docker Compose** - 多容器編排
-- **Render** - 雲端部署平台
-
-
-### 專案結構
+## 📁 專案結構
 
 ```
 order_management_system/
-├── app/                        # 應用程式主目錄
-│   ├── __init__.py            # Flask 應用工廠
-│   ├── models/                # 數據模型
-│   │   ├── user.py
-│   │   ├── product.py
-│   │   ├── order.py
-│   │   ├── payment.py
-│   │   ├── customer.py
-│   │   └── notification.py
-│   ├── routes/                # API 路由
-│   │   ├── auth.py
-│   │   ├── users.py
-│   │   ├── products.py
-│   │   ├── orders.py
-│   │   ├── payments.py
-│   │   └── dashboard.py
-│   ├── services/              # 業務邏輯層
-│   ├── schemas/               # 數據驗證模式
-│   ├── forms/                 # 表單處理
-│   └── utils/                 # 工具函數
-├── migrations/                # 數據庫遷移檔案
-├── scripts/                   # 腳本檔案
-├── pytest/                    # 測試檔案
-├── config.py                  # 配置檔案
-├── run.py                     # 應用程式入口
-└── requirements.txt           # Python 依賴
+├── app/
+│   ├── __init__.py
+│   ├── models/         # 數據模型（user, product, order, ...）
+│   ├── routes/         # API 路由（auth, users, products, ...）
+│   ├── services/       # 業務邏輯（service layer）
+│   ├── schemas/        # marshmallow 驗證/序列化
+│   ├── forms/          # 表單驗證
+│   └── utils/          # 工具（MAC 驗證、email...）
+├── migrations/         # Alembic 遷移
+├── pytest/             # 測試
+├── scripts/            # 初始化/假資料腳本
+├── config.py           # 設定
+├── run.py              # 入口
+├── requirements.txt    # 依賴
+├── Dockerfile          # 容器
+├── docker-compose.yml  # 多服務協調
+└── README.md
 ```
+
+---
+
+## 🧪 測試與部署
+- `pytest/` 單元/整合測試
+- `docker-compose up` 一鍵啟動
+- 支援本地/雲端部署
+
