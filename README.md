@@ -7,6 +7,32 @@
 
 電子商務訂單管理系統後端 API，基於 Flask，支援多角色權限、商品/訂單/支付/報表/通知等完整功能，並具備完善分層、測試與容器化部署。
 
+### 目前此前端已部署到Render雲端平台，可透過下方測試帳號進行測試。
+
+此為免費方案部署，伺服器會有閒置模式，初次開啟需要等伺服器啟動，若有loading情況請耐心等候，謝謝。
+
+後端網址:https://oms-backend-d0yc.onrender.com
+
+請先開啟後端網址，待後端啟動後顯示Hello, Order Management System，即可開啟下方前端網頁進行測試。
+
+前端網址:https://oms-frontend-ixkl.onrender.com
+
+### 預設測試帳號
+
+```
+管理員帳號:
+Email: admin@example.com
+Password: AdminPassword123!
+
+銷售員帳號:
+Email: seller@example.com
+Password: SellerPassword123!
+
+客戶帳號:
+Email: customer@example.com
+Password: CustomerPassword123!
+```
+
 ---
 
 ## 📋 目錄
